@@ -1,20 +1,25 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Croix, Grille, Rond, TraitGagnant } from "./croquis";
+import { cn } from "@/lib/utils";
 import {
   chargerMoteur,
   VIDE,
   estPlein,
   ligneGagnante,
-  meilleurCoup,
+  coupIA,
   quiGagne,
   HUMAIN,
   IA,
   type Case,
   type Moteur,
+  type Niveau,
   type Plateau,
 } from "@/lib/moteur";
+
+type Mode = "ia" | "duo";
 
 type Statut =
   | "chargement"
@@ -47,6 +52,12 @@ const COULEURS: Record<Statut, string> = {
   erreur: "text-bleu-fonce",
 };
 
+const NOMS_NIVEAU: Record<Niveau, string> = {
+  facile: "Facile",
+  moyen: "Moyen",
+  difficile: "Difficile",
+};
+
 const PLATEAU_VIDE: Plateau = new Array<Case>(9).fill(VIDE);
 
 function resultat(moteur: Moteur, plateau: Plateau): Statut | null {
@@ -55,6 +66,52 @@ function resultat(moteur: Moteur, plateau: Plateau): Statut | null {
   if (gagnant === IA) return "perdu";
   if (estPlein(moteur, plateau)) return "nul";
   return null;
+}
+
+function NomJoueur({ joueur }: { joueur: Case }) {
+  const estX = joueur === HUMAIN;
+  return (
+    <mark
+      className={cn(
+        "-rotate-1 rounded-sm px-1 text-encre box-decoration-clone",
+        estX ? "bg-fluo-rose/55" : "bg-fluo-bleu/55",
+      )}
+    >
+      {estX ? "Joueur 1" : "Joueur 2"}
+    </mark>
+  );
+}
+
+function contenuStatutDuo(statut: Statut, joueur: Case): ReactNode {
+  switch (statut) {
+    case "tonTour":
+      return (
+        <>
+          {joueur === HUMAIN ? (
+            <Croix className="size-6 text-fluo-rose" />
+          ) : (
+            <Rond className="size-6 text-fluo-bleu" />
+          )}
+          Au tour de <NomJoueur joueur={joueur} />
+        </>
+      );
+    case "gagne":
+      return (
+        <>
+          <NomJoueur joueur={HUMAIN} /> gagne !
+        </>
+      );
+    case "perdu":
+      return (
+        <>
+          <NomJoueur joueur={IA} /> gagne !
+        </>
+      );
+    case "nul":
+      return "Égalité !";
+    default:
+      return TEXTES[statut];
+  }
 }
 
 function Batons({ nombre }: { nombre: number }) {
@@ -118,10 +175,16 @@ function BoutonGomme({
   );
 }
 
-export default function Morpion() {
+type PropsMorpion = {
+  mode: Mode;
+  niveau?: Niveau;
+};
+
+export default function Morpion({ mode, niveau = "difficile" }: PropsMorpion) {
   const [plateau, setPlateau] = useState<Plateau>(PLATEAU_VIDE);
   const [statut, setStatut] = useState<Statut>("chargement");
   const [ligne, setLigne] = useState<number[] | null>(null);
+  const [joueur, setJoueur] = useState<Case>(HUMAIN);
   const [score, setScore] = useState<Record<ResultatPartie, number>>({
     gagne: 0,
     perdu: 0,
@@ -145,6 +208,26 @@ export default function Morpion() {
     const moteur = moteurRef.current;
     if (!moteur || statut !== "tonTour" || plateau[index] !== VIDE) return;
 
+    if (mode === "duo") {
+      const apres = [...plateau];
+      apres[index] = joueur;
+      setPlateau(apres);
+
+      const fin = resultat(moteur, apres);
+      if (fin) {
+        setStatut(fin);
+        if (fin === "gagne" || fin === "perdu") {
+          setLigne(ligneGagnante(moteur, apres));
+        }
+        if (fin === "gagne" || fin === "perdu" || fin === "nul") {
+          enregistrerScore(fin);
+        }
+        return;
+      }
+      setJoueur(joueur === HUMAIN ? IA : HUMAIN);
+      return;
+    }
+
     const apresToi = [...plateau];
     apresToi[index] = HUMAIN;
     setPlateau(apresToi);
@@ -167,7 +250,7 @@ export default function Morpion() {
     setStatut("iaReflechit");
 
     setTimeout(() => {
-      const coup = meilleurCoup(moteur, apresToi);
+      const coup = coupIA(moteur, apresToi, niveau);
       const apresIA = [...apresToi];
       apresIA[coup] = IA;
       setPlateau(apresIA);
@@ -190,29 +273,39 @@ export default function Morpion() {
     setPlateau(PLATEAU_VIDE);
     setStatut("tonTour");
     setLigne(null);
+    setJoueur(HUMAIN);
   }
 
   const partieTerminee =
     statut === "gagne" || statut === "perdu" || statut === "nul";
 
   return (
-    <div className="relative flex flex-col items-center gap-6">
+    <div className="relative flex flex-col items-center gap-6 lg:w-[340px]">
       <p
-        key={statut}
+        key={mode === "duo" ? `${statut}-${joueur}` : statut}
         aria-live="polite"
         data-statut={statut}
+        data-joueur={mode === "duo" ? joueur : undefined}
         className={
-          "pop flex h-9 items-center gap-2 text-2xl font-semibold " +
-          COULEURS[statut]
+          "pop flex h-9 min-w-0 items-center justify-center gap-2 text-lg font-semibold sm:text-2xl " +
+          (mode === "duo" ? "text-encre" : COULEURS[statut])
         }
       >
-        {statut === "tonTour" && <Croix className="size-6 text-fluo-rose" />}
-        {statut === "iaReflechit" && (
-          <Rond className="size-6 text-fluo-bleu" />
+        {mode === "duo" ? (
+          contenuStatutDuo(statut, joueur)
+        ) : (
+          <>
+            {statut === "tonTour" && (
+              <Croix className="size-6 text-fluo-rose" />
+            )}
+            {statut === "iaReflechit" && (
+              <Rond className="size-6 text-fluo-bleu" />
+            )}
+            {TEXTES[statut]}
+          </>
         )}
-        {TEXTES[statut]}
       </p>
-      <div className="relative aspect-square w-[min(80vw,340px)]">
+      <div className="relative aspect-square w-[min(100%,340px)]">
         <Grille />
         {ligne && <TraitGagnant ligne={ligne} />}
         <div
@@ -244,9 +337,12 @@ export default function Morpion() {
                   style={{ rotate: `${((index * 37) % 7) - 3}deg` }}
                 />
               )}
-              {valeur === VIDE && (
-                <Croix className="size-full text-fluo-rose opacity-0 transition-opacity group-enabled:group-hover:opacity-25" />
-              )}
+              {valeur === VIDE &&
+                (mode === "duo" && joueur === IA ? (
+                  <Rond className="size-full text-fluo-bleu opacity-0 transition-opacity group-enabled:group-hover:opacity-25" />
+                ) : (
+                  <Croix className="size-full text-fluo-rose opacity-0 transition-opacity group-enabled:group-hover:opacity-25" />
+                ))}
             </button>
           ))}
         </div>
@@ -261,19 +357,23 @@ export default function Morpion() {
         )}
       </div>
       <div
-        className="post-it bg-postit-jaune relative mt-2 w-28 -rotate-2 p-2 text-sm lg:absolute lg:-right-[104px] lg:top-0 lg:mt-0 lg:w-36 lg:-rotate-3 lg:p-3 lg:text-base"
-        aria-label={`Score : toi ${score.gagne}, IA ${score.perdu}, nuls ${score.nul}`}
+        className="post-it bg-postit-jaune relative mt-2 w-28 -rotate-2 p-2 text-sm lg:absolute lg:-right-[104px] lg:top-[60px] lg:mt-0 lg:w-36 lg:-rotate-3 lg:p-3 lg:text-base"
+        aria-label={
+          mode === "ia"
+            ? `Score : toi ${score.gagne}, IA ${score.perdu}, nuls ${score.nul}`
+            : `Score : J1 ${score.gagne}, J2 ${score.perdu}, nuls ${score.nul}`
+        }
       >
         <p className="font-ecole text-base font-bold text-encre lg:text-lg">
-          Score
+          {mode === "ia" ? `Score · ${NOMS_NIVEAU[niveau]}` : "Score"}
         </p>
         <div className="mt-1 flex flex-col gap-1 text-graphite">
           <div className="flex items-center gap-2">
-            <span className="w-9 shrink-0">Toi</span>
+            <span className="w-9 shrink-0">{mode === "ia" ? "Toi" : "J1"}</span>
             <Batons nombre={score.gagne} />
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-9 shrink-0">IA</span>
+            <span className="w-9 shrink-0">{mode === "ia" ? "IA" : "J2"}</span>
             <Batons nombre={score.perdu} />
           </div>
           <div className="flex items-center gap-2">

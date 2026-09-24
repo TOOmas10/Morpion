@@ -4,6 +4,7 @@ import { Playwrite_FR_Trad, Shantell_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
+import Bureau from "@/components/bureau";
 
 export const metadata: Metadata = {
   title: "Morpion",
@@ -37,7 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           defaultTheme="light"
           disableTransitionOnChange
         >
-          {children}
+          <Bureau>{children}</Bureau>
 
           <Toaster />
         </ThemeProvider>
