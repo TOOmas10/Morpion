@@ -10,14 +10,16 @@ function https(domaine: string | undefined): string | undefined {
   return domaine ? `https://${domaine}` : undefined;
 }
 
+const adresseProduction = https(process.env.VERCEL_PROJECT_PRODUCTION_URL);
+
 const adressesVercel = [
+  adresseProduction,
   https(process.env.VERCEL_URL),
   https(process.env.VERCEL_BRANCH_URL),
 ].filter((adresse): adresse is string => !!adresse);
 
 export const auth = betterAuth({
-  baseURL:
-    process.env.BETTER_AUTH_URL ?? https(process.env.VERCEL_PROJECT_PRODUCTION_URL),
+  baseURL: adresseProduction ?? process.env.BETTER_AUTH_URL,
   trustedOrigins: adressesVercel,
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   emailAndPassword: {
