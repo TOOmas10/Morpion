@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { COLONNES, RANGEES } from "@/lib/grille";
 import { cn } from "@/lib/utils";
 
 type PropsForme = {
@@ -7,43 +8,47 @@ type PropsForme = {
   style?: CSSProperties;
 };
 
+const TAILLE_CASE = 100;
+const LARGEUR = COLONNES * TAILLE_CASE;
+const HAUTEUR = RANGEES * TAILLE_CASE;
+
+function tremble(n: number): number {
+  return ((n * 37) % 7) - 3;
+}
+
+const TRAITS = [
+  ...Array.from({ length: COLONNES - 1 }, (_, i) => {
+    const x = (i + 1) * TAILLE_CASE;
+    return `M ${x + tremble(i)} 8 C ${x - tremble(i + 2)} ${HAUTEUR / 3} ${x + tremble(i + 4)} ${(HAUTEUR * 2) / 3} ${x - tremble(i + 1)} ${HAUTEUR - 8}`;
+  }),
+  ...Array.from({ length: RANGEES - 1 }, (_, i) => {
+    const y = (i + 1) * TAILLE_CASE;
+    return `M 8 ${y - tremble(i + 3)} C ${LARGEUR / 3} ${y + tremble(i + 5)} ${(LARGEUR * 2) / 3} ${y - tremble(i + 1)} ${LARGEUR - 8} ${y + tremble(i)}`;
+  }),
+];
+
 export function Grille() {
   return (
     <svg
-      viewBox="0 0 300 300"
+      viewBox={`0 0 ${LARGEUR} ${HAUTEUR}`}
       className="absolute inset-0 size-full text-graphite"
       fill="none"
       stroke="currentColor"
       strokeLinecap="round"
       strokeLinejoin="round"
-      strokeWidth={3.5}
+      strokeWidth={5}
       opacity={0.9}
       aria-hidden
     >
-      <path
-        pathLength={1}
-        className="trace"
-        style={{ "--delai": "0ms", "--duree": "350ms" } as CSSProperties}
-        d="M 99 8 C 103 90 96 190 101 292"
-      />
-      <path
-        pathLength={1}
-        className="trace"
-        style={{ "--delai": "150ms", "--duree": "350ms" } as CSSProperties}
-        d="M 201 8 C 197 90 204 190 199 292"
-      />
-      <path
-        pathLength={1}
-        className="trace"
-        style={{ "--delai": "300ms", "--duree": "350ms" } as CSSProperties}
-        d="M 8 99 C 90 103 190 96 292 101"
-      />
-      <path
-        pathLength={1}
-        className="trace"
-        style={{ "--delai": "450ms", "--duree": "350ms" } as CSSProperties}
-        d="M 8 201 C 90 197 190 204 292 199"
-      />
+      {TRAITS.map((d, index) => (
+        <path
+          key={index}
+          pathLength={1}
+          className="trace"
+          style={{ "--delai": `${index * 60}ms`, "--duree": "300ms" } as CSSProperties}
+          d={d}
+        />
+      ))}
     </svg>
   );
 }
@@ -109,12 +114,12 @@ type PropsTraitGagnant = {
 
 export function TraitGagnant({ ligne }: PropsTraitGagnant) {
   const centre = (index: number) => ({
-    x: 50 + 100 * (index % 3),
-    y: 50 + 100 * Math.floor(index / 3),
+    x: TAILLE_CASE / 2 + TAILLE_CASE * (index % COLONNES),
+    y: TAILLE_CASE / 2 + TAILLE_CASE * Math.floor(index / COLONNES),
   });
 
   const depart = centre(ligne[0]);
-  const arrivee = centre(ligne[2]);
+  const arrivee = centre(ligne[ligne.length - 1]);
   const dx = arrivee.x - depart.x;
   const dy = arrivee.y - depart.y;
   const longueur = Math.hypot(dx, dy) || 1;
@@ -124,7 +129,7 @@ export function TraitGagnant({ ligne }: PropsTraitGagnant) {
   const debut = { x: depart.x - ux * 25, y: depart.y - uy * 25 };
   const fin = { x: arrivee.x + ux * 25, y: arrivee.y + uy * 25 };
   const milieu = { x: (debut.x + fin.x) / 2, y: (debut.y + fin.y) / 2 };
-  const bombement = 6;
+  const bombement = 8;
   const controle = {
     x: milieu.x - uy * bombement,
     y: milieu.y + ux * bombement,
@@ -132,7 +137,7 @@ export function TraitGagnant({ ligne }: PropsTraitGagnant) {
 
   return (
     <svg
-      viewBox="0 0 300 300"
+      viewBox={`0 0 ${LARGEUR} ${HAUTEUR}`}
       className="absolute inset-0 size-full pointer-events-none mix-blend-multiply text-fluo-jaune"
       fill="none"
       stroke="currentColor"
@@ -146,7 +151,7 @@ export function TraitGagnant({ ligne }: PropsTraitGagnant) {
       <path
         pathLength={1}
         className="trace"
-        style={{ "--delai": "250ms", "--duree": "450ms" } as CSSProperties}
+        style={{ "--delai": "250ms", "--duree": "500ms" } as CSSProperties}
         d={`M ${debut.x} ${debut.y} Q ${controle.x} ${controle.y} ${fin.x} ${fin.y}`}
       />
     </svg>

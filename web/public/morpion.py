@@ -1,110 +1,232 @@
 import random
+import time
 
 HUMAIN = "X"
 IA = "O"
 VIDE = " "
 
-LIGNES_GAGNANTES = (
-    (0, 1, 2), (3, 4, 5), (6, 7, 8),
-    (0, 3, 6), (1, 4, 7), (2, 5, 8),
-    (0, 4, 8), (2, 4, 6),
+COLONNES = 7
+RANGEES = 6
+CASES = COLONNES * RANGEES
+ALIGNEMENT = 4
+CENTRE = (RANGEES // 2) * COLONNES + COLONNES // 2
+
+GAIN = 100000
+POIDS = (0, 1, 8, 64, 0)
+POIDS_ADVERSE = (0, 2, 12, 96, 0)
+TEMPS_DIFFICILE = 0.6
+LARGEUR = 12
+
+
+class TempsEcoule(Exception):
+    pass
+
+
+def calculer_lignes_gagnantes():
+    lignes = []
+    for rang in range(RANGEES):
+        for colonne in range(COLONNES):
+            for dr, dc in ((0, 1), (1, 0), (1, 1), (1, -1)):
+                fin_rang = rang + dr * (ALIGNEMENT - 1)
+                fin_colonne = colonne + dc * (ALIGNEMENT - 1)
+                if 0 <= fin_rang < RANGEES and 0 <= fin_colonne < COLONNES:
+                    lignes.append(tuple(
+                        (rang + dr * k) * COLONNES + colonne + dc * k
+                        for k in range(ALIGNEMENT)
+                    ))
+    return tuple(lignes)
+
+
+def calculer_voisines():
+    voisines = []
+    for case in range(CASES):
+        rang, colonne = divmod(case, COLONNES)
+        liste = []
+        for dr in (-1, 0, 1):
+            for dc in (-1, 0, 1):
+                r, c = rang + dr, colonne + dc
+                if (dr or dc) and 0 <= r < RANGEES and 0 <= c < COLONNES:
+                    liste.append(r * COLONNES + c)
+        voisines.append(tuple(liste))
+    return tuple(voisines)
+
+
+LIGNES_GAGNANTES = calculer_lignes_gagnantes()
+LIGNES_PAR_CASE = tuple(
+    tuple(ligne for ligne in LIGNES_GAGNANTES if case in ligne)
+    for case in range(CASES)
 )
+VOISINES = calculer_voisines()
 
 
-def afficher_plateau(plateau):
-    print()
-    cases = []
-    for i in range(9): 
-        if plateau[i] == VIDE:
-            cases.append(str(i + 1))
-        else: 
-            cases.append(plateau[i])
-    for debut in range(0,9,3):
-        print(f" {cases[debut]} | {cases[debut + 1]} | {cases[debut + 2]} ")
-        if debut != 6: 
-            print("---+---+---")
-    print()
+def coups_possibles(plateau):
+    return [case for case in range(CASES) if plateau[case] == VIDE]
 
-
-def coups_possibles(plateau) : 
-    liste = []
-    for i in range(9):
-        if plateau[i] == VIDE:
-            liste.append(i)  
-    return liste
 
 def plein(plateau):
     return VIDE not in plateau
 
 
 def adversaire(joueur):
-    if joueur == "X":
-        return "O"
-    else:
-        return "X"
-
-def jouer(plateau, case, joueur): 
-    nouveau = plateau.copy()
-    nouveau[case] = joueur
-    return nouveau
+    return HUMAIN if joueur == IA else IA
 
 
 def gagnant(plateau):
-    for a,b,c in LIGNES_GAGNANTES: 
-        if plateau[a] != VIDE and plateau[a] == plateau[b] == plateau[c]:
-            return plateau[a]
+    for ligne in LIGNES_GAGNANTES:
+        premier = plateau[ligne[0]]
+        if premier != VIDE and all(plateau[case] == premier for case in ligne):
+            return premier
     return None
 
 
-def minimax(plateau, profondeur, tour_ia):
-    g = gagnant(plateau)
-    if g == IA:
-        return 10 - profondeur
-    if g == HUMAIN: 
-        return profondeur - 10
-    if plein(plateau):
+def gagne_en(plateau, case, joueur):
+    for ligne in LIGNES_PAR_CASE[case]:
+        if all(autre == case or plateau[autre] == joueur for autre in ligne):
+            return True
+    return False
+
+
+def coups_candidats(plateau):
+    candidats = set()
+    for case in range(CASES):
+        if plateau[case] != VIDE:
+            for voisine in VOISINES[case]:
+                if plateau[voisine] == VIDE:
+                    candidats.add(voisine)
+    if not candidats:
+        return [CENTRE] if plateau[CENTRE] == VIDE else coups_possibles(plateau)
+    return list(candidats)
+
+
+def interet(plateau, case):
+    total = 0
+    for ligne in LIGNES_PAR_CASE[case]:
+        ia = humain = 0
+        for autre in ligne:
+            if plateau[autre] == IA:
+                ia += 1
+            elif plateau[autre] == HUMAIN:
+                humain += 1
+        if not humain:
+            total += POIDS[ia + 1]
+        if not ia:
+            total += POIDS[humain + 1]
+    return total
+
+
+def coups_tries(plateau):
+    candidats = coups_candidats(plateau)
+    candidats.sort(key=lambda case: interet(plateau, case), reverse=True)
+    return candidats
+
+
+def evaluation(plateau):
+    score = 0
+    for ligne in LIGNES_GAGNANTES:
+        ia = humain = 0
+        for case in ligne:
+            if plateau[case] == IA:
+                ia += 1
+            elif plateau[case] == HUMAIN:
+                humain += 1
+        if ia and not humain:
+            score += POIDS[ia]
+        elif humain and not ia:
+            score -= POIDS_ADVERSE[humain]
+    return score
+
+
+def minimax(plateau, profondeur, restante, alpha, beta, tour_ia, fin):
+    if time.perf_counter() > fin:
+        raise TempsEcoule
+    joueur = IA if tour_ia else HUMAIN
+    candidats = coups_tries(plateau)
+    if not candidats:
         return 0
 
-    if tour_ia: 
-        meilleur = -float("inf")
-        for case in coups_possibles(plateau):
-            nouveau_plateau = jouer(plateau, case, IA)
-            score = minimax(nouveau_plateau, profondeur + 1, False)
-            meilleur = max(meilleur,score)
-        return meilleur
-    else: 
-        meilleur = float("inf")
-        for case in coups_possibles(plateau):
-            nouveau_plateau = jouer(plateau, case, HUMAIN)
-            score = minimax(nouveau_plateau, profondeur + 1, True)
-            meilleur = min(meilleur,score)
-        return meilleur
+    for case in candidats:
+        if gagne_en(plateau, case, joueur):
+            return GAIN - profondeur if tour_ia else profondeur - GAIN
+
+    menaces = [case for case in candidats if gagne_en(plateau, case, adversaire(joueur))]
+    if len(menaces) >= 2:
+        return profondeur + 1 - GAIN if tour_ia else GAIN - profondeur - 1
+    if restante == 0:
+        return evaluation(plateau)
+    if menaces:
+        candidats = menaces
+    else:
+        candidats = candidats[:LARGEUR]
+
+    meilleur = -float("inf") if tour_ia else float("inf")
+    for case in candidats:
+        plateau[case] = joueur
+        try:
+            score = minimax(plateau, profondeur + 1, restante - 1, alpha, beta, not tour_ia, fin)
+        finally:
+            plateau[case] = VIDE
+        if tour_ia:
+            meilleur = max(meilleur, score)
+            alpha = max(alpha, score)
+        else:
+            meilleur = min(meilleur, score)
+            beta = min(beta, score)
+        if alpha >= beta:
+            break
+    return meilleur
 
 
-def meilleur_coup(plateau): 
-    meilleur_score = -float("inf")
-    meilleur_case = None
-    for case in coups_possibles(plateau):
-        nouveau_plateau = jouer(plateau,case, IA)
-        score = minimax(nouveau_plateau, 1, False)
-        if score > meilleur_score:
-            meilleur_score = score
-            meilleur_case = case
-    return meilleur_case
+def meilleur_coup(plateau, budget=TEMPS_DIFFICILE):
+    plateau = list(plateau)
+    fin = time.perf_counter() + budget
+    candidats = coups_tries(plateau)
+    for case in candidats:
+        if gagne_en(plateau, case, IA):
+            return case
+    for case in candidats:
+        if gagne_en(plateau, case, HUMAIN):
+            return case
+
+    candidats = candidats[:LARGEUR]
+    choix = candidats[0]
+    for restante in range(1, CASES):
+        try:
+            meilleur_score = -float("inf")
+            meilleur_case = candidats[0]
+            alpha = -float("inf")
+            for case in candidats:
+                plateau[case] = IA
+                try:
+                    score = minimax(plateau, 1, restante - 1, alpha, float("inf"), False, fin)
+                finally:
+                    plateau[case] = VIDE
+                if score > meilleur_score:
+                    meilleur_score = score
+                    meilleur_case = case
+                alpha = max(alpha, score)
+        except TempsEcoule:
+            break
+        choix = meilleur_case
+        if abs(meilleur_score) > GAIN - CASES:
+            break
+        candidats.remove(choix)
+        candidats.insert(0, choix)
+    return choix
 
 
 def coup_aleatoire(plateau):
-    return random.choice(coups_possibles(plateau))
+    return random.choice(coups_candidats(plateau))
 
 
 def coup_malin(plateau):
-    for case in coups_possibles(plateau):
-        if gagnant(jouer(plateau, case, IA)) == IA:
+    candidats = coups_tries(plateau)
+    for case in candidats:
+        if gagne_en(plateau, case, IA):
             return case
-    for case in coups_possibles(plateau):
-        if gagnant(jouer(plateau, case, HUMAIN)) == HUMAIN:
+    for case in candidats:
+        if gagne_en(plateau, case, HUMAIN):
             return case
-    return coup_aleatoire(plateau)
+    return random.choice(candidats[:3])
 
 
 def coup_ia(plateau, niveau):
@@ -113,65 +235,3 @@ def coup_ia(plateau, niveau):
     if niveau == "moyen":
         return coup_malin(plateau)
     return meilleur_coup(plateau)
-
-
-def demander_coup(plateau):
-    while True:
-        saisie= input("Ta case (1-9) : ")
-        if not saisie.isdigit():
-            print("Erreur, la saisie doit être un chiffre")
-            continue
-        numero = int(saisie)
-        if numero < 1 or numero > 9: 
-            print("Le chiffre doit être entre 1 et 9")
-            continue
-        case = numero - 1 
-        if plateau[case] != VIDE:
-            print("Cette case est déjà prise")
-            continue
-        return case
-
-
-def partie():
-    print()
-    plateau = [VIDE] * 9
-    tour = HUMAIN
-    while gagnant(plateau) is None and not plein(plateau):
-        afficher_plateau(plateau)
-        if tour == HUMAIN: 
-            case = demander_coup(plateau)
-        else: 
-            case = meilleur_coup(plateau)
-            print(f"L'IA joue en {case + 1}")
-        plateau = jouer(plateau, case, tour)
-        tour = adversaire(tour)
-    afficher_plateau(plateau)
-    g = gagnant(plateau)
-    if g == HUMAIN:
-        print("Tu as gagné !")
-    elif g == IA:
-        print("Tu as perdu !")
-    else:
-        print("Match nul !")
-    print()
-
-
-def demander_rejouer():
-    while True:
-        reponse = input("Rejouer ? (o/n) : ").strip().lower()
-        if reponse == "o":
-            return True
-        if reponse == "n": 
-            return False
-        print("Réponds par o ou n")
-
-
-if __name__ == "__main__":
-    encore = True
-    while encore: 
-        partie()
-        encore = demander_rejouer()
-    print()
-    print("À bientôt !")
-    print()
-    

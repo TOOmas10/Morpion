@@ -1,18 +1,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
-
-@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-hand);
-  --font-heading: var(--font-hand);
   --font-ecole: var(--font-ecole);
   --color-encre: var(--encre);
-  --color-papier: var(--papier);
-  --color-gris: var(--gris);
   --color-fluo-rose: var(--fluo-rose);
   --color-fluo-bleu: var(--fluo-bleu);
   --color-fluo-jaune: var(--fluo-jaune);
@@ -22,53 +16,25 @@
   --color-vert-fonce: var(--vert-fonce);
   --color-graphite: var(--graphite);
   --color-bois: var(--bois);
-  --color-bois-veine: var(--bois-veine);
   --color-postit-jaune: var(--postit-jaune);
   --color-postit-rose: var(--postit-rose);
   --color-postit-vert: var(--postit-vert);
   --color-postit-bleu: var(--postit-bleu);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 :root {
   --encre: #1e1e1e;
   --papier: #fffefa;
-  --gris: #868e96;
   --fluo-rose: #ff4fa3;
   --fluo-bleu: #22b8f0;
   --fluo-jaune: #ffe600;
@@ -85,70 +51,14 @@
   --postit-bleu: #bfe6ff;
   --background: var(--papier);
   --foreground: var(--encre);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(95.815% 0.00011 271.152);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
 }
 
 @layer base {
@@ -185,14 +95,15 @@ body {
 }
 
 .seyes {
+  --marge: 37px;
   background-color: var(--papier);
   background-image:
     linear-gradient(
       to right,
-      transparent 55px,
-      #f19a9a 55px,
-      #f19a9a 57px,
-      transparent 57px
+      transparent var(--marge),
+      #f19a9a var(--marge),
+      #f19a9a calc(var(--marge) + 2px),
+      transparent calc(var(--marge) + 2px)
     ),
     repeating-linear-gradient(
       to right,
@@ -241,12 +152,6 @@ body {
 .pop {
   animation: pop 250ms ease-out;
 }
-
-.croquis {
-  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
-  border: 2px solid var(--encre);
-}
-
 .post-it {
   box-shadow:
     0 1px 1px rgb(0 0 0 / 0.08),
@@ -309,15 +214,218 @@ body {
   animation: frotter 300ms ease-in-out;
 }
 
+@media (width >= 40rem) {
+  .seyes {
+    --marge: 55px;
+  }
+}
+
+@keyframes poser-feuille {
+  from {
+    opacity: 0;
+    translate: 0 28px;
+    scale: 0.97;
+  }
+}
+
+.feuille-arrive {
+  animation: poser-feuille 600ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+@keyframes objet-arrive {
+  from {
+    opacity: 0;
+    translate: var(--depuis, 0 16px);
+  }
+}
+
+.objet-arrive {
+  animation: objet-arrive 650ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--delai, 250ms)
+    backwards;
+}
+.arrive-gauche {
+  --depuis: -32px 8px;
+}
+.arrive-droite {
+  --depuis: 32px 8px;
+}
+.delai-1 {
+  --delai: 250ms;
+}
+.delai-2 {
+  --delai: 350ms;
+}
+.delai-3 {
+  --delai: 450ms;
+}
+
+@keyframes coller {
+  0% {
+    opacity: 0;
+    translate: 0 -14px;
+    scale: 1.08;
+  }
+  70% {
+    opacity: 1;
+    translate: 0 2px;
+    scale: 0.99;
+  }
+}
+
+.choix > * {
+  animation: coller 420ms cubic-bezier(0.3, 0.7, 0.3, 1) backwards;
+}
+.choix > :nth-child(2) {
+  animation-delay: 70ms;
+}
+.choix > :nth-child(3) {
+  animation-delay: 140ms;
+}
+.choix > :nth-child(4) {
+  animation-delay: 210ms;
+}
+
+@keyframes entree-ligne {
+  from {
+    opacity: 0;
+    translate: -12px 0;
+  }
+}
+
+.entree-ligne {
+  animation: entree-ligne 380ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+@keyframes clignoter {
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+.points-attente span {
+  animation: clignoter 1.2s infinite both;
+}
+.points-attente span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.points-attente span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes flotter {
+  50% {
+    translate: 0 -4px;
+  }
+}
+
+.flotter {
+  animation: flotter 3s ease-in-out infinite;
+}
+
+@keyframes confetti {
+  0% {
+    opacity: 1;
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  100% {
+    opacity: 0;
+    translate: var(--dx) var(--dy);
+    rotate: var(--r);
+  }
+}
+
+.confetti {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: confetti 1s cubic-bezier(0.15, 0.7, 0.3, 1) var(--delai, 0ms) forwards;
+}
+
+@keyframes vt-sortie {
+  to {
+    opacity: 0;
+    translate: var(--decalage) 0;
+  }
+}
+
+@keyframes vt-entree {
+  from {
+    opacity: 0;
+    translate: var(--decalage) 0;
+  }
+}
+
+@keyframes vt-fondu-sortie {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-fondu-entree {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-old(.glisse-avant) {
+  --decalage: -48px;
+  animation: vt-sortie 180ms ease-in both;
+}
+::view-transition-new(.glisse-avant) {
+  --decalage: 48px;
+  animation: vt-entree 280ms cubic-bezier(0.2, 0.8, 0.2, 1) 120ms both;
+}
+::view-transition-old(.glisse-arriere) {
+  --decalage: 48px;
+  animation: vt-sortie 180ms ease-in both;
+}
+::view-transition-new(.glisse-arriere) {
+  --decalage: -48px;
+  animation: vt-entree 280ms cubic-bezier(0.2, 0.8, 0.2, 1) 120ms both;
+}
+::view-transition-old(.fondu) {
+  animation: vt-fondu-sortie 150ms ease-in both;
+}
+::view-transition-new(.fondu) {
+  animation: vt-fondu-entree 260ms ease-out 100ms both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .trace {
     animation: none;
     stroke-dashoffset: 0;
   }
-  .pop {
+  .pop,
+  .gomme:hover,
+  .feuille-arrive,
+  .objet-arrive,
+  .choix > *,
+  .entree-ligne,
+  .points-attente span,
+  .flotter {
     animation: none;
   }
-  .gomme:hover {
-    animation: none;
+  .confetti {
+    display: none;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
 }

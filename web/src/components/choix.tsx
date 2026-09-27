@@ -18,18 +18,64 @@ type PropsChoixPostIt = {
   children: ReactNode;
 };
 
+const CLASSE_POSTIT =
+  "post-it flex size-32 cursor-pointer flex-col items-center justify-center gap-2 text-center text-2xl font-semibold text-encre transition-all duration-200 ease-out hover:-translate-y-1 hover:rotate-0 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-dashed focus-visible:outline-graphite focus-visible:outline-offset-2 sm:size-36";
+
 export function ChoixPostIt({ href, couleur, rotation = 0, children }: PropsChoixPostIt) {
   return (
     <Link
       href={href}
+      transitionTypes={["nav-avant"]}
+      style={{ rotate: `${rotation}deg` } as CSSProperties}
+      className={cn(CLASSE_POSTIT, FONDS[couleur])}
+    >
+      {children}
+    </Link>
+  );
+}
+
+type PropsBoutonPostIt = {
+  couleur: Couleur;
+  rotation?: number;
+  disabled?: boolean;
+  children: ReactNode;
+};
+
+export function BoutonPostIt({
+  couleur,
+  rotation = 0,
+  disabled = false,
+  children,
+}: PropsBoutonPostIt) {
+  return (
+    <button
+      type="submit"
+      disabled={disabled}
+      style={{ rotate: `${rotation}deg` } as CSSProperties}
+      className={cn(CLASSE_POSTIT, FONDS[couleur], "disabled:cursor-wait disabled:opacity-70")}
+    >
+      {children}
+    </button>
+  );
+}
+
+type PropsCartePostIt = {
+  couleur: Couleur;
+  rotation?: number;
+  children: ReactNode;
+};
+
+export function CartePostIt({ couleur, rotation = 0, children }: PropsCartePostIt) {
+  return (
+    <div
       style={{ rotate: `${rotation}deg` } as CSSProperties}
       className={cn(
-        "post-it flex size-32 cursor-pointer flex-col items-center justify-center gap-2 text-center text-2xl font-semibold text-encre transition-all duration-200 ease-out hover:-translate-y-1 hover:rotate-0 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-dashed focus-visible:outline-graphite focus-visible:outline-offset-2 sm:size-36",
+        "post-it flex size-32 flex-col items-center justify-center gap-2 p-3 text-center text-encre sm:size-36",
         FONDS[couleur],
       )}
     >
       {children}
-    </Link>
+    </div>
   );
 }
 
@@ -67,9 +113,16 @@ export function Retour({ href, children }: PropsRetour) {
   return (
     <Link
       href={href}
-      className="self-start text-lg text-graphite underline-offset-4 hover:underline"
+      transitionTypes={["nav-arriere"]}
+      className="group self-start text-lg text-graphite underline-offset-4 hover:underline"
     >
-      {children ?? "← Retour"}
+      <span
+        aria-hidden
+        className="inline-block transition-transform duration-200 group-hover:-translate-x-1"
+      >
+        ←
+      </span>{" "}
+      {children ?? "Retour"}
     </Link>
   );
 }
@@ -79,5 +132,5 @@ type PropsChoix = {
 };
 
 export function Choix({ children }: PropsChoix) {
-  return <div className="flex flex-wrap justify-center gap-6">{children}</div>;
+  return <div className="choix flex flex-wrap justify-center gap-6">{children}</div>;
 }

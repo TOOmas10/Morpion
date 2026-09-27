@@ -9,7 +9,6 @@ declare global {
 const URL_PYODIDE = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/";
 
 type ModuleMorpion = {
-  meilleur_coup: (plateau: unknown) => number;
   coup_ia: (plateau: unknown, niveau: string) => number;
   gagnant: (plateau: unknown) => string | undefined;
   plein: (plateau: unknown) => boolean;
@@ -70,15 +69,6 @@ export type Plateau = Case[];
 export const VIDE: Case = " ";
 export const HUMAIN: Case = "X";
 export const IA: Case = "O";
-
-export function meilleurCoup(moteur: Moteur, plateau: Plateau): number {
-  const liste = moteur.pyodide.toPy(plateau);
-  try {
-    return moteur.morpion.meilleur_coup(liste);
-  } finally {
-    liste.destroy();
-  }
-}
 
 export type Niveau = "facile" | "moyen" | "difficile";
 

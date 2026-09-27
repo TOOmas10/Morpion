@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Retour } from "@/components/choix";
 import Morpion from "@/components/morpion";
 import { NIVEAUX, type Niveau } from "@/lib/moteur";
+import TransitionPage from "@/components/transition-page";
 
 const NOMS: Record<Niveau, string> = {
   facile: "Facile",
@@ -29,9 +30,11 @@ export default async function PartieIAPage({
   if (!NIVEAUX.includes(niveau as Niveau)) notFound();
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      <Retour href="/jouer/ia" />
-      <Morpion mode="ia" niveau={niveau as Niveau} />
-    </div>
+    <TransitionPage>
+      <div className="flex flex-col items-center gap-6">
+        <Retour href="/jouer/ia" />
+        <Morpion mode="ia" niveau={niveau as Niveau} />
+      </div>
+    </TransitionPage>
   );
 }

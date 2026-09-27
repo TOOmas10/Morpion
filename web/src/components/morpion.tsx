@@ -2,7 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { Croix, Grille, Rond, TraitGagnant } from "./croquis";
+import BoutonGomme from "./bouton-gomme";
+import { Croix, Rond } from "./croquis";
+import PlateauJeu from "./plateau";
+import { ALIGNEMENT, CASES } from "@/lib/grille";
 import { cn } from "@/lib/utils";
 import {
   chargerMoteur,
@@ -58,7 +61,7 @@ const NOMS_NIVEAU: Record<Niveau, string> = {
   difficile: "Difficile",
 };
 
-const PLATEAU_VIDE: Plateau = new Array<Case>(9).fill(VIDE);
+const PLATEAU_VIDE: Plateau = new Array<Case>(CASES).fill(VIDE);
 
 function resultat(moteur: Moteur, plateau: Plateau): Statut | null {
   const gagnant = quiGagne(moteur, plateau);
@@ -92,7 +95,9 @@ function contenuStatutDuo(statut: Statut, joueur: Case): ReactNode {
           ) : (
             <Rond className="size-6 text-fluo-bleu" />
           )}
-          Au tour de <NomJoueur joueur={joueur} />
+          <span>
+            Au tour de <NomJoueur joueur={joueur} />
+          </span>
         </>
       );
     case "gagne":
@@ -150,28 +155,6 @@ function Batons({ nombre }: { nombre: number }) {
         );
       })}
     </svg>
-  );
-}
-
-function BoutonGomme({
-  texte,
-  onClick,
-}: {
-  texte: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      autoFocus
-      onClick={onClick}
-      className="gomme flex h-10 -rotate-2 cursor-pointer overflow-hidden rounded-md shadow-md transition active:translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-fonce"
-    >
-      <span className="w-[35%] bg-white" />
-      <span className="flex items-center justify-center bg-[#4dabf7] px-6 text-xl font-semibold text-white">
-        {texte}
-      </span>
-    </button>
   );
 }
 
@@ -280,14 +263,14 @@ export default function Morpion({ mode, niveau = "difficile" }: PropsMorpion) {
     statut === "gagne" || statut === "perdu" || statut === "nul";
 
   return (
-    <div className="relative flex flex-col items-center gap-6 lg:w-[340px]">
+    <div className="relative flex w-full max-w-[400px] flex-col items-center gap-3">
       <p
         key={mode === "duo" ? `${statut}-${joueur}` : statut}
         aria-live="polite"
         data-statut={statut}
         data-joueur={mode === "duo" ? joueur : undefined}
         className={
-          "pop flex h-9 min-w-0 items-center justify-center gap-2 text-lg font-semibold sm:text-2xl " +
+          "pop flex h-9 min-w-0 items-center justify-center gap-2 text-base font-semibold whitespace-nowrap sm:text-2xl " +
           (mode === "duo" ? "text-encre" : COULEURS[statut])
         }
       >
@@ -305,59 +288,32 @@ export default function Morpion({ mode, niveau = "difficile" }: PropsMorpion) {
           </>
         )}
       </p>
-      <div className="relative aspect-square w-[min(100%,340px)]">
-        <Grille />
-        {ligne && <TraitGagnant ligne={ligne} />}
-        <div
-          className={
-            "absolute inset-0 grid grid-cols-3 grid-rows-3 transition-opacity duration-500" +
-            (statut === "nul" ? " opacity-40" : "")
-          }
-        >
-          {plateau.map((valeur, index) => (
-            <button
-              key={index}
-              type="button"
-              aria-label={`Case ${index + 1} : ${valeur === VIDE ? "vide" : valeur}`}
-              disabled={statut !== "tonTour" || valeur !== VIDE}
-              className="group relative flex items-center justify-center p-[18%] enabled:cursor-pointer disabled:cursor-default focus-visible:outline-2 focus-visible:outline-dashed focus-visible:outline-rose-fonce focus-visible:outline-offset-[-6px]"
-              onClick={() => cliquer(index)}
-            >
-              {valeur === HUMAIN && (
-                <Croix
-                  anime
-                  className="size-full text-fluo-rose"
-                  style={{ rotate: `${((index * 37) % 7) - 3}deg` }}
-                />
-              )}
-              {valeur === IA && (
-                <Rond
-                  anime
-                  className="size-full text-fluo-bleu"
-                  style={{ rotate: `${((index * 37) % 7) - 3}deg` }}
-                />
-              )}
-              {valeur === VIDE &&
-                (mode === "duo" && joueur === IA ? (
-                  <Rond className="size-full text-fluo-bleu opacity-0 transition-opacity group-enabled:group-hover:opacity-25" />
-                ) : (
-                  <Croix className="size-full text-fluo-rose opacity-0 transition-opacity group-enabled:group-hover:opacity-25" />
-                ))}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PlateauJeu
+        cases={plateau}
+        estJouable={(index) => statut === "tonTour" && plateau[index] === VIDE}
+        surClic={cliquer}
+        fantome={mode === "duo" && joueur === IA ? "O" : "X"}
+        ligne={ligne}
+        attenue={statut === "nul"}
+        fete={statut === "gagne" || (mode === "duo" && statut === "perdu")}
+      />
+      <p className="-mt-2 text-xs text-graphite sm:text-sm">
+        Aligne {ALIGNEMENT} symboles pour gagner
+      </p>
       <div className="flex h-14 items-center">
-        {partieTerminee && <BoutonGomme texte="Rejouer" onClick={rejouer} />}
+        {partieTerminee && (
+          <BoutonGomme texte="Rejouer" onClick={rejouer} autoFocus />
+        )}
         {statut === "erreur" && (
           <BoutonGomme
             texte="Recharger"
             onClick={() => window.location.reload()}
+            autoFocus
           />
         )}
       </div>
       <div
-        className="post-it bg-postit-jaune relative mt-2 w-28 -rotate-2 p-2 text-sm lg:absolute lg:-right-[104px] lg:top-[60px] lg:mt-0 lg:w-36 lg:-rotate-3 lg:p-3 lg:text-base"
+        className="post-it bg-postit-jaune relative mt-2 w-28 -rotate-2 p-2 text-sm lg:absolute lg:-right-[156px] lg:top-[48px] lg:mt-0 lg:w-36 lg:-rotate-3 lg:p-3 lg:text-base"
         aria-label={
           mode === "ia"
             ? `Score : toi ${score.gagne}, IA ${score.perdu}, nuls ${score.nul}`

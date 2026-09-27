@@ -1,8 +1,8 @@
 import type { CSSProperties } from "react";
 
-export default async function Header() {
+export default function Header() {
   return (
-    <div className="relative py-2 text-center">
+    <div className="relative isolate py-2 text-center">
       <svg
         viewBox="0 0 340 40"
         className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-6 w-[110%] -translate-x-1/2 -translate-y-1/2 -rotate-1 mix-blend-multiply text-fluo-jaune sm:h-7 lg:h-9"
@@ -21,7 +21,7 @@ export default async function Header() {
         />
       </svg>
       <h1 className="font-ecole relative z-10 inline-block -rotate-1 text-lg text-encre sm:text-2xl lg:text-4xl">
-        Morpion Python
+        Morpion 7x6
       </h1>
     </div>
   );

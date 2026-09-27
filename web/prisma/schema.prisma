@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String    @id
+  name            String
+  email           String
+  emailVerified   Boolean   @default(false)
+  image           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  username        String?
+  displayUsername String?
+  points          Int       @default(0)
+  sessions        Session[]
+  accounts        Account[]
+  partiesX        Partie[]  @relation("partiesX")
+  partiesO        Partie[]  @relation("partiesO")
+
+  @@unique([email])
+  @@unique([username])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+enum StatutPartie {
+  ATTENTE
+  EN_COURS
+  TERMINEE
+  EXPIREE
+}
+
+model Partie {
+  id        String       @id @default(cuid())
+  code      String       @unique
+  statut    StatutPartie @default(ATTENTE)
+  plateau   String       @default("                                          ")
+  tour      String       @default("X")
+  gagnant   String?
+  finPar    String?
+  joueurXId String
+  joueurX   User         @relation("partiesX", fields: [joueurXId], references: [id], onDelete: Cascade)
+  joueurOId String?
+  joueurO   User?        @relation("partiesO", fields: [joueurOId], references: [id], onDelete: Cascade)
+  creeLe    DateTime     @default(now())
+  majLe     DateTime     @updatedAt
+
+  @@index([joueurXId])
+  @@index([joueurOId])
+  @@map("partie")
+}

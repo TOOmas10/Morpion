@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Morpion 7×6
 
-## Getting Started
+Morpion sur une grille de 7 colonnes × 6 rangées : il faut aligner 4 symboles.
+On joue contre une IA (3 niveaux), à deux sur le même écran, ou en ligne avec un code d'invitation.
 
-First, run the development server:
+La logique du jeu est en Python (`public/morpion.py`) :
+
+- dans le navigateur, via Pyodide, pour l'IA (minimax avec élagage alpha-bêta) ;
+- sur le serveur, pour arbitrer les parties en ligne (`src/lib/arbitre.ts`).
+
+## Prérequis
+
+- Node 20 (`nvm use`)
+- PostgreSQL en local (par exemple Postgres.app) avec une base `morpion`
+
+## Installation
+
+Crée un fichier `.env` :
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+DATABASE_URL="postgresql://<utilisateur>@localhost:5432/morpion"
+BETTER_AUTH_SECRET="<secret aléatoire : openssl rand -base64 32>"
+BETTER_AUTH_URL="http://localhost:3000"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Puis :
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npx prisma migrate dev
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Le site tourne sur [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+## Après une modification du schéma Prisma
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npx prisma migrate dev
+npx prisma generate
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Application installable (PWA)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Le site s'installe comme une application : sur Android (Chrome), menu ⋮ → « Installer l'application » ;
+sur iPhone (Safari), bouton Partager → « Sur l'écran d'accueil ».
+Après une première visite en ligne, les modes contre l'IA et à deux fonctionnent hors connexion
+(`public/sw.js`, actif uniquement en production).
 
-## Deploy on Vercel
+## Déploiement sur Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Root Directory : `web`
+- Base de données : Neon (Vercel Marketplace), qui fournit `DATABASE_URL` et `DATABASE_URL_UNPOOLED`
+- Variables à ajouter : `BETTER_AUTH_SECRET` et `BETTER_AUTH_URL` (l'adresse de production, en https)
+- Le script `vercel-build` applique les migrations (`prisma migrate deploy`) avant `next build`
