@@ -3,7 +3,9 @@
 import type { KeyboardEvent } from "react";
 import { useState } from "react";
 import Confettis from "@/components/confettis";
-import { Croix, Grille, Rond, TraitGagnant } from "@/components/croquis";
+import { Grille, TraitGagnant } from "@/components/croquis";
+import { Symbole } from "@/components/symbole";
+import type { Apparence, Camp } from "@/lib/apparence";
 import { CASES, COLONNES } from "@/lib/grille";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +20,8 @@ type PropsPlateauJeu = {
   cases: string[];
   estJouable: (index: number) => boolean;
   surClic: (index: number) => void;
-  fantome: "X" | "O";
+  fantome: Camp;
+  apparences: Record<Camp, Apparence>;
   ligne: number[] | null;
   attenue?: boolean;
   fete?: boolean;
@@ -29,6 +32,7 @@ export default function PlateauJeu({
   estJouable,
   surClic,
   fantome,
+  apparences,
   ligne,
   attenue = false,
   fete = false,
@@ -81,27 +85,20 @@ export default function PlateauJeu({
                 jouable ? "cursor-pointer" : "cursor-default",
               )}
             >
-              {valeur === "X" && (
-                <Croix
+              {(valeur === "X" || valeur === "O") && (
+                <Symbole
                   anime
-                  className="size-full text-fluo-rose"
+                  apparence={apparences[valeur]}
+                  className="size-full"
                   style={{ rotate: `${((index * 37) % 7) - 3}deg` }}
                 />
               )}
-              {valeur === "O" && (
-                <Rond
-                  anime
-                  className="size-full text-fluo-bleu"
-                  style={{ rotate: `${((index * 37) % 7) - 3}deg` }}
+              {valeur === " " && jouable && (
+                <Symbole
+                  apparence={apparences[fantome]}
+                  className="size-full opacity-0 transition-opacity group-hover:opacity-25"
                 />
               )}
-              {valeur === " " &&
-                jouable &&
-                (fantome === "X" ? (
-                  <Croix className="size-full text-fluo-rose opacity-0 transition-opacity group-hover:opacity-25" />
-                ) : (
-                  <Rond className="size-full text-fluo-bleu opacity-0 transition-opacity group-hover:opacity-25" />
-                ))}
             </button>
           );
         })}

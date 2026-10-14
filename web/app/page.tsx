@@ -10,6 +10,9 @@ export default function Home() {
           <ChoixPostIt href="/jouer" couleur="rose" rotation={-2}>
             Jouer
           </ChoixPostIt>
+          <ChoixPostIt href="/boutique" couleur="bleu" rotation={-1}>
+            Boutique
+          </ChoixPostIt>
           <ChoixPostIt href="/classement" couleur="vert" rotation={1}>
             Classement
           </ChoixPostIt>

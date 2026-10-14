@@ -1,12 +1,17 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { ReactNode, RefObject } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { commencerPartieLocale, terminerPartieLocale, type GainLocal } from "@app/jouer/actions";
 import BoutonGomme from "./bouton-gomme";
-import { Croix, Rond } from "./croquis";
+import { IconePiece } from "./icones-boutique";
 import PlateauJeu from "./plateau";
+import { Symbole } from "./symbole";
+import { apparencesPartie, type Apparence, type Camp, type Equipement } from "@/lib/apparence";
+import { COULEURS_CSS, PLAFOND_LOCAL_24H } from "@/lib/boutique";
 import { ALIGNEMENT, CASES } from "@/lib/grille";
-import { cn } from "@/lib/utils";
 import {
   chargerMoteur,
   VIDE,
@@ -45,15 +50,12 @@ const TEXTES: Record<Statut, string> = {
   erreur: "L'IA ne répond pas",
 };
 
-const COULEURS: Record<Statut, string> = {
-  chargement: "text-graphite",
-  tonTour: "text-rose-fonce",
-  iaReflechit: "text-bleu-fonce",
-  gagne: "text-rose-fonce",
-  perdu: "text-bleu-fonce",
-  nul: "text-vert-fonce",
-  erreur: "text-bleu-fonce",
-};
+function couleurStatut(statut: Statut, apparences: Record<Camp, Apparence>): string {
+  if (statut === "chargement") return "var(--graphite)";
+  if (statut === "nul") return "var(--vert-fonce)";
+  const camp: Camp = statut === "tonTour" || statut === "gagne" ? "X" : "O";
+  return COULEURS_CSS[apparences[camp].couleur].texte;
+}
 
 const NOMS_NIVEAU: Record<Niveau, string> = {
   facile: "Facile",
@@ -71,45 +73,45 @@ function resultat(moteur: Moteur, plateau: Plateau): Statut | null {
   return null;
 }
 
-function NomJoueur({ joueur }: { joueur: Case }) {
-  const estX = joueur === HUMAIN;
+function NomJoueur({ joueur, apparence }: { joueur: Case; apparence: Apparence }) {
   return (
     <mark
-      className={cn(
-        "-rotate-1 rounded-sm px-1 text-encre box-decoration-clone",
-        estX ? "bg-fluo-rose/55" : "bg-fluo-bleu/55",
-      )}
+      className="-rotate-1 rounded-sm px-1 text-encre box-decoration-clone"
+      style={{
+        backgroundColor: `color-mix(in srgb, ${COULEURS_CSS[apparence.couleur].trait} 55%, transparent)`,
+      }}
     >
-      {estX ? "Joueur 1" : "Joueur 2"}
+      {joueur === HUMAIN ? "Joueur 1" : "Joueur 2"}
     </mark>
   );
 }
 
-function contenuStatutDuo(statut: Statut, joueur: Case): ReactNode {
+function contenuStatutDuo(
+  statut: Statut,
+  joueur: Case,
+  apparences: Record<Camp, Apparence>,
+): ReactNode {
+  const camp: Camp = joueur === HUMAIN ? "X" : "O";
   switch (statut) {
     case "tonTour":
       return (
         <>
-          {joueur === HUMAIN ? (
-            <Croix className="size-6 text-fluo-rose" />
-          ) : (
-            <Rond className="size-6 text-fluo-bleu" />
-          )}
+          <Symbole apparence={apparences[camp]} className="size-6 shrink-0" />
           <span>
-            Au tour de <NomJoueur joueur={joueur} />
+            Au tour de <NomJoueur joueur={joueur} apparence={apparences[camp]} />
           </span>
         </>
       );
     case "gagne":
       return (
         <>
-          <NomJoueur joueur={HUMAIN} /> gagne !
+          <NomJoueur joueur={HUMAIN} apparence={apparences.X} /> gagne !
         </>
       );
     case "perdu":
       return (
         <>
-          <NomJoueur joueur={IA} /> gagne !
+          <NomJoueur joueur={IA} apparence={apparences.O} /> gagne !
         </>
       );
     case "nul":
@@ -161,9 +163,58 @@ function Batons({ nombre }: { nombre: number }) {
 type PropsMorpion = {
   mode: Mode;
   niveau?: Niveau;
+  equipement?: Equipement | null;
+  connecte?: boolean;
 };
 
-export default function Morpion({ mode, niveau = "difficile" }: PropsMorpion) {
+function MessageGain({ gain, connecte }: { gain: GainLocal | null; connecte: boolean }) {
+  if (!connecte) {
+    return (
+      <Link href="/connexion" className="text-xs text-graphite underline underline-offset-4 sm:text-sm">
+        Connecte-toi pour gagner des pièces
+      </Link>
+    );
+  }
+  if (!gain) return null;
+  if (gain.gain === 0) {
+    return (
+      <p className="text-xs text-graphite sm:text-sm">
+        Plafond atteint : {PLAFOND_LOCAL_24H} pièces par 24 h en solo
+      </p>
+    );
+  }
+  return (
+    <p className="pop flex items-center gap-1 text-sm font-semibold text-encre" data-gain={gain.gain}>
+      +{gain.gain} <IconePiece /> {gain.gain > 1 ? "pièces" : "pièce"}
+    </p>
+  );
+}
+
+function demarrerManche(
+  jeton: RefObject<string | null>,
+  connecte: boolean,
+  mode: Mode,
+  niveau: Niveau,
+) {
+  jeton.current = null;
+  if (!connecte) return;
+  commencerPartieLocale(mode, mode === "ia" ? niveau : undefined)
+    .then((id) => {
+      jeton.current = id;
+    })
+    .catch(() => {});
+}
+
+export default function Morpion({
+  mode,
+  niveau = "difficile",
+  equipement = null,
+  connecte = false,
+}: PropsMorpion) {
+  const router = useRouter();
+  const apparences = useMemo(() => apparencesPartie(equipement, null), [equipement]);
+  const jetonRef = useRef<string | null>(null);
+  const [gainLocal, setGainLocal] = useState<GainLocal | null>(null);
   const [plateau, setPlateau] = useState<Plateau>(PLATEAU_VIDE);
   const [statut, setStatut] = useState<Statut>("chargement");
   const [ligne, setLigne] = useState<number[] | null>(null);
@@ -184,6 +235,9 @@ export default function Morpion({ mode, niveau = "difficile" }: PropsMorpion) {
         setStatut("erreur");
       });
   }, []);
+  useEffect(() => {
+    demarrerManche(jetonRef, connecte, mode, niveau);
+  }, [connecte, mode, niveau]);
   function enregistrerScore(fin: ResultatPartie) {
     setScore((s) => ({ ...s, [fin]: s[fin] + 1 }));
   }
@@ -257,10 +311,25 @@ export default function Morpion({ mode, niveau = "difficile" }: PropsMorpion) {
     setStatut("tonTour");
     setLigne(null);
     setJoueur(HUMAIN);
+    setGainLocal(null);
+    demarrerManche(jetonRef, connecte, mode, niveau);
   }
 
   const partieTerminee =
     statut === "gagne" || statut === "perdu" || statut === "nul";
+
+  useEffect(() => {
+    const jeton = jetonRef.current;
+    if (!partieTerminee || !jeton) return;
+    jetonRef.current = null;
+    terminerPartieLocale(jeton, plateau.join(""))
+      .then((resultatGain) => {
+        if (!resultatGain) return;
+        setGainLocal(resultatGain);
+        router.refresh();
+      })
+      .catch(() => {});
+  }, [partieTerminee, plateau, router]);
 
   return (
     <div className="relative flex w-full max-w-[400px] flex-col items-center gap-3">
@@ -269,20 +338,18 @@ export default function Morpion({ mode, niveau = "difficile" }: PropsMorpion) {
         aria-live="polite"
         data-statut={statut}
         data-joueur={mode === "duo" ? joueur : undefined}
-        className={
-          "pop flex h-9 min-w-0 items-center justify-center gap-2 text-base font-semibold whitespace-nowrap sm:text-2xl " +
-          (mode === "duo" ? "text-encre" : COULEURS[statut])
-        }
+        className="pop flex h-9 min-w-0 items-center justify-center gap-2 text-base font-semibold whitespace-nowrap sm:text-2xl"
+        style={{ color: mode === "duo" ? "var(--encre)" : couleurStatut(statut, apparences) }}
       >
         {mode === "duo" ? (
-          contenuStatutDuo(statut, joueur)
+          contenuStatutDuo(statut, joueur, apparences)
         ) : (
           <>
             {statut === "tonTour" && (
-              <Croix className="size-6 text-fluo-rose" />
+              <Symbole apparence={apparences.X} className="size-6 shrink-0" />
             )}
             {statut === "iaReflechit" && (
-              <Rond className="size-6 text-fluo-bleu" />
+              <Symbole apparence={apparences.O} className="size-6 shrink-0" />
             )}
             {TEXTES[statut]}
           </>
@@ -293,6 +360,7 @@ export default function Morpion({ mode, niveau = "difficile" }: PropsMorpion) {
         estJouable={(index) => statut === "tonTour" && plateau[index] === VIDE}
         surClic={cliquer}
         fantome={mode === "duo" && joueur === IA ? "O" : "X"}
+        apparences={apparences}
         ligne={ligne}
         attenue={statut === "nul"}
         fete={statut === "gagne" || (mode === "duo" && statut === "perdu")}
@@ -300,9 +368,12 @@ export default function Morpion({ mode, niveau = "difficile" }: PropsMorpion) {
       <p className="-mt-2 text-xs text-graphite sm:text-sm">
         Aligne {ALIGNEMENT} symboles pour gagner
       </p>
-      <div className="flex h-14 items-center">
+      <div className="flex min-h-14 flex-col items-center justify-center gap-1">
         {partieTerminee && (
-          <BoutonGomme texte="Rejouer" onClick={rejouer} autoFocus />
+          <>
+            <BoutonGomme texte="Rejouer" onClick={rejouer} autoFocus />
+            <MessageGain gain={gainLocal} connecte={connecte} />
+          </>
         )}
         {statut === "erreur" && (
           <BoutonGomme

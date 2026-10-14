@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Retour } from "@/components/choix";
+import { IconeBadge } from "@/components/icones-boutique";
+import { badgeDe } from "@/lib/apparence";
+import type { Badge } from "@/lib/boutique";
 import { prisma } from "@/lib/prisma";
 import { lireSession, pseudoDe } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -17,6 +20,7 @@ type Ligne = {
   rang: number;
   pseudo: string;
   points: number;
+  badge: Badge | null;
 };
 
 function LigneClassement({
@@ -42,6 +46,7 @@ function LigneClassement({
       </span>
       <span className="min-w-0 flex-1 truncate text-encre">
         {ligne.pseudo}
+        {ligne.badge && <IconeBadge badge={ligne.badge} className="ml-1" />}
         {estMoi && <span className="text-graphite"> (toi)</span>}
       </span>
       <span className="shrink-0 font-semibold text-encre">
@@ -58,7 +63,14 @@ export default async function ClassementPage() {
   const meilleurs = await prisma.user.findMany({
     orderBy: [{ points: "desc" }, { createdAt: "asc" }],
     take: TAILLE_PODIUM,
-    select: { id: true, name: true, username: true, displayUsername: true, points: true },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      displayUsername: true,
+      points: true,
+      badge: true,
+    },
   });
 
   const lignes: Ligne[] = [];
@@ -66,7 +78,13 @@ export default async function ClassementPage() {
     const precedente = lignes[index - 1];
     const rang =
       precedente && precedente.points === joueur.points ? precedente.rang : index + 1;
-    lignes.push({ id: joueur.id, rang, pseudo: pseudoDe(joueur), points: joueur.points });
+    lignes.push({
+      id: joueur.id,
+      rang,
+      pseudo: pseudoDe(joueur),
+      points: joueur.points,
+      badge: badgeDe(joueur),
+    });
   });
 
   let maLigne: Ligne | null = null;
@@ -79,6 +97,7 @@ export default async function ClassementPage() {
       rang: devant + 1,
       pseudo: pseudoDe(session.user),
       points: session.user.points,
+      badge: badgeDe(session.user),
     };
   }
 

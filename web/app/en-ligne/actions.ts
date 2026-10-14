@@ -14,7 +14,7 @@ import {
   limiteAttente,
   normaliserCode,
   symboleDe,
-  verserPoints,
+  verserRecompenses,
 } from "@/lib/parties";
 import { prisma } from "@/lib/prisma";
 import { lireSession } from "@/lib/session";
@@ -141,7 +141,7 @@ export async function jouerCoup(
       },
     });
     if (count === 0) return false;
-    if (gagnant) await verserPoints(tx, partie, gagnant);
+    if (gagnant) await verserRecompenses(tx, partie, gagnant);
     return true;
   });
 
@@ -175,7 +175,7 @@ export async function abandonner(saisie: string): Promise<ResultatCoup> {
         where: { id: partie.id, statut: "EN_COURS" },
         data: { statut: "TERMINEE", gagnant: vainqueur, finPar: "abandon" },
       });
-      if (count > 0) await verserPoints(tx, partie, vainqueur);
+      if (count > 0) await verserRecompenses(tx, partie, vainqueur, true);
     });
   }
 

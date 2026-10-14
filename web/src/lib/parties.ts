@@ -1,7 +1,9 @@
 import "server-only";
 import { randomInt } from "node:crypto";
 import type { Partie, Prisma } from "@/generated/prisma/client";
+import { apparencesPartie, badgeDe } from "@/lib/apparence";
 import { arbitrer } from "@/lib/arbitre";
+import { PIECES_EN_LIGNE } from "@/lib/boutique";
 import { prisma } from "@/lib/prisma";
 import { pseudoDe } from "@/lib/session";
 import type { EtatPartie, Symbole } from "@/lib/types-partie";
@@ -53,29 +55,58 @@ export async function expirerSiBesoin(partie: Partie): Promise<Partie> {
   return (await prisma.partie.findUnique({ where: { id: partie.id } })) ?? partie;
 }
 
-export async function verserPoints(
+function idDe(partie: Partie, symbole: Symbole): string | null {
+  return symbole === "X" ? partie.joueurXId : partie.joueurOId;
+}
+
+export async function verserRecompenses(
   tx: Prisma.TransactionClient,
   partie: Partie,
   gagnant: Symbole | "nul",
+  abandon = false,
 ): Promise<void> {
   if (gagnant === "nul") {
     await tx.user.updateMany({
       where: { id: { in: [partie.joueurXId, partie.joueurOId ?? ""] } },
-      data: { points: { increment: POINTS_NUL } },
+      data: {
+        points: { increment: POINTS_NUL },
+        pieces: { increment: PIECES_EN_LIGNE.nul },
+      },
     });
     return;
   }
-  const idGagnant = gagnant === "X" ? partie.joueurXId : partie.joueurOId;
-  if (!idGagnant) return;
-  await tx.user.update({
-    where: { id: idGagnant },
-    data: { points: { increment: POINTS_VICTOIRE } },
-  });
+  const idGagnant = idDe(partie, gagnant);
+  const idPerdant = idDe(partie, adversaire(gagnant));
+  if (idGagnant) {
+    await tx.user.update({
+      where: { id: idGagnant },
+      data: {
+        points: { increment: POINTS_VICTOIRE },
+        pieces: { increment: PIECES_EN_LIGNE.victoire },
+      },
+    });
+  }
+  if (idPerdant && !abandon) {
+    await tx.user.update({
+      where: { id: idPerdant },
+      data: { pieces: { increment: PIECES_EN_LIGNE.defaite } },
+    });
+  }
 }
 
+const PROFIL = {
+  name: true,
+  username: true,
+  displayUsername: true,
+  forme: true,
+  couleur: true,
+  trace: true,
+  badge: true,
+} as const;
+
 const JOUEURS = {
-  joueurX: { select: { name: true, username: true, displayUsername: true } },
-  joueurO: { select: { name: true, username: true, displayUsername: true } },
+  joueurX: { select: PROFIL },
+  joueurO: { select: PROFIL },
 } as const;
 
 export async function chargerPartie(code: string) {
@@ -100,9 +131,17 @@ export async function etatPour(
       ? (await arbitrer(partie.plateau)).ligne
       : null;
   let pointsGagnes = 0;
+  let piecesGagnees = 0;
   if (partie.statut === "TERMINEE") {
-    if (gagnant === monSymbole) pointsGagnes = POINTS_VICTOIRE;
-    else if (gagnant === "nul") pointsGagnes = POINTS_NUL;
+    if (gagnant === monSymbole) {
+      pointsGagnes = POINTS_VICTOIRE;
+      piecesGagnees = PIECES_EN_LIGNE.victoire;
+    } else if (gagnant === "nul") {
+      pointsGagnes = POINTS_NUL;
+      piecesGagnees = PIECES_EN_LIGNE.nul;
+    } else if (finPar !== "abandon") {
+      piecesGagnees = PIECES_EN_LIGNE.defaite;
+    }
   }
   return {
     code: partie.code,
@@ -116,6 +155,9 @@ export async function etatPour(
     joueurX: pseudoDe(partie.joueurX),
     joueurO: partie.joueurO ? pseudoDe(partie.joueurO) : null,
     pointsGagnes,
+    piecesGagnees,
+    apparences: apparencesPartie(partie.joueurX, partie.joueurO),
+    badges: { X: badgeDe(partie.joueurX), O: badgeDe(partie.joueurO) },
   };
 }
 

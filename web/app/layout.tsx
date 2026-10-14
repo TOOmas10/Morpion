@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
 import Bureau from "@/components/bureau";
 import ServiceWorker from "@/components/service-worker";
+import { FiltresTrace } from "@/components/symbole";
 
 export const metadata: Metadata = {
   title: "Morpion",
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" className={cn("h-full", shantell.variable, ecole.variable)}>
       <body className="h-full antialiased">
+        <FiltresTrace />
         <Bureau>{children}</Bureau>
         <Toaster />
         <ServiceWorker />

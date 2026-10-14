@@ -67,6 +67,16 @@ export const auth = betterAuth({
         defaultValue: 0,
         input: false,
       },
+      pieces: {
+        type: "number",
+        required: true,
+        defaultValue: 0,
+        input: false,
+      },
+      forme: { type: "string", required: false, input: false },
+      couleur: { type: "string", required: false, input: false },
+      trace: { type: "string", required: false, input: false },
+      badge: { type: "string", required: false, input: false },
     },
   },
   plugins: [

@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Retour } from "@/components/choix";
 import { InvitationRejoindre } from "@/components/formulaires-partie";
+import { IconeBadge } from "@/components/icones-boutique";
 import SalleEnLigne from "@/components/salle-en-ligne";
 import TransitionPage from "@/components/transition-page";
+import { badgeDe } from "@/lib/apparence";
 import { chargerPartie, etatPour, normaliserCode, symboleDe } from "@/lib/parties";
 import { lireSession, pseudoDe } from "@/lib/session";
 
@@ -42,12 +44,14 @@ async function Contenu({ code, idUtilisateur }: { code: string; idUtilisateur: s
     return <Message texte="Cette partie est déjà complète" />;
   }
 
+  const badgeHote = badgeDe(partie.joueurX);
   return (
     <div className="flex flex-col items-center gap-6">
       <Retour href="/en-ligne" />
       <p className="text-center text-lg font-semibold text-encre sm:text-2xl">
         <mark className="-rotate-1 rounded-sm bg-fluo-rose/55 px-1 text-encre">
           {pseudoDe(partie.joueurX)}
+          {badgeHote && <IconeBadge badge={badgeHote} className="ml-1" />}
         </mark>{" "}
         t&apos;invite à jouer !
       </p>

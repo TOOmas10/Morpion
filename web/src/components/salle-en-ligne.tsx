@@ -6,32 +6,43 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { abandonner, jouerCoup } from "@app/en-ligne/actions";
-import { Croix, Rond } from "@/components/croquis";
+import { IconeBadge, IconePiece } from "@/components/icones-boutique";
+import { Symbole as DessinSymbole } from "@/components/symbole";
 import { FormulaireNouvellePartie } from "@/components/formulaires-partie";
 import PlateauJeu from "@/components/plateau";
+import { COULEURS_CSS } from "@/lib/boutique";
 import { ALIGNEMENT } from "@/lib/grille";
 import type { EtatPartie, Symbole } from "@/lib/types-partie";
-import { cn } from "@/lib/utils";
 
-function Pseudo({ symbole, children }: { symbole: Symbole; children: ReactNode }) {
+function Pseudo({
+  etat,
+  symbole,
+  children,
+}: {
+  etat: EtatPartie;
+  symbole: Symbole;
+  children: ReactNode;
+}) {
+  const badge = etat.badges[symbole];
   return (
     <mark
-      className={cn(
-        "-rotate-1 rounded-sm px-1 text-encre box-decoration-clone",
-        symbole === "X" ? "bg-fluo-rose/55" : "bg-fluo-bleu/55",
-      )}
+      className="-rotate-1 rounded-sm px-1 text-encre box-decoration-clone"
+      style={{
+        backgroundColor: `color-mix(in srgb, ${COULEURS_CSS[etat.apparences[symbole].couleur].trait} 55%, transparent)`,
+      }}
     >
       {children}
+      {badge && <IconeBadge badge={badge} className="ml-1" />}
     </mark>
   );
 }
 
-function MiniSymbole({ symbole }: { symbole: Symbole }) {
-  return symbole === "X" ? (
-    <Croix className="size-6 shrink-0 text-fluo-rose" />
-  ) : (
-    <Rond className="size-6 shrink-0 text-fluo-bleu" />
-  );
+function MiniSymbole({ etat, symbole }: { etat: EtatPartie; symbole: Symbole }) {
+  return <DessinSymbole apparence={etat.apparences[symbole]} className="size-6 shrink-0" />;
+}
+
+function couleurTexte(etat: EtatPartie, symbole: Symbole): string {
+  return COULEURS_CSS[etat.apparences[symbole].couleur].texte;
 }
 
 function autre(symbole: Symbole): Symbole {
@@ -57,16 +68,16 @@ function Statut({ etat, arbitreLent }: { etat: EtatPartie; arbitreLent: boolean 
     if (arbitreLent) return <>L&apos;arbitre se réveille…</>;
     return etat.tour === moi ? (
       <>
-        <MiniSymbole symbole={moi} />
+        <MiniSymbole etat={etat} symbole={moi} />
         <span>
-          À toi, <Pseudo symbole={moi}>{nomDe(etat, moi)}</Pseudo> !
+          À toi, <Pseudo etat={etat} symbole={moi}>{nomDe(etat, moi)}</Pseudo> !
         </span>
       </>
     ) : (
       <>
-        <MiniSymbole symbole={lui} />
+        <MiniSymbole etat={etat} symbole={lui} />
         <span>
-          Au tour de <Pseudo symbole={lui}>{nomDe(etat, lui)}</Pseudo>
+          Au tour de <Pseudo etat={etat} symbole={lui}>{nomDe(etat, lui)}</Pseudo>
         </span>
       </>
     );
@@ -77,7 +88,7 @@ function Statut({ etat, arbitreLent }: { etat: EtatPartie; arbitreLent: boolean 
   if (resultat === "gagne") {
     return etat.finPar === "abandon" ? (
       <>
-        <Pseudo symbole={lui}>{nomDe(etat, lui)}</Pseudo> abandonne : +{etat.pointsGagnes}{" "}
+        <Pseudo etat={etat} symbole={lui}>{nomDe(etat, lui)}</Pseudo> abandonne : +{etat.pointsGagnes}{" "}
         {points}
       </>
     ) : (
@@ -91,7 +102,7 @@ function Statut({ etat, arbitreLent }: { etat: EtatPartie; arbitreLent: boolean 
       <>Tu as abandonné</>
     ) : (
       <>
-        Perdu ! <Pseudo symbole={lui}>{nomDe(etat, lui)}</Pseudo> gagne
+        Perdu ! <Pseudo etat={etat} symbole={lui}>{nomDe(etat, lui)}</Pseudo> gagne
       </>
     );
   }
@@ -279,9 +290,9 @@ export default function SalleEnLigne({ etatInitial }: { etatInitial: EtatPartie 
       className="flex w-full max-w-[400px] flex-col items-center gap-3"
     >
       <p className="flex flex-wrap items-center justify-center gap-x-2 text-sm text-graphite">
-        <Pseudo symbole="X">{etat.joueurX}</Pseudo>
+        <Pseudo etat={etat} symbole="X">{etat.joueurX}</Pseudo>
         contre
-        <Pseudo symbole="O">{etat.joueurO}</Pseudo>
+        <Pseudo etat={etat} symbole="O">{etat.joueurO}</Pseudo>
       </p>
       <p
         key={`${etat.statut}-${etat.tour}-${arbitreLent}`}
@@ -289,13 +300,17 @@ export default function SalleEnLigne({ etatInitial }: { etatInitial: EtatPartie 
         data-statut={etat.statut}
         data-resultat={resultat}
         data-tour={etat.statut === "EN_COURS" ? etat.tour : undefined}
-        className={cn(
-          "pop flex min-h-9 items-center justify-center gap-x-2 text-center text-base font-semibold sm:text-2xl",
-          resultat === "gagne" && "text-rose-fonce",
-          resultat === "perdu" && "text-bleu-fonce",
-          resultat === "nul" && "text-vert-fonce",
-          !resultat && "text-encre",
-        )}
+        className="pop flex min-h-9 items-center justify-center gap-x-2 text-center text-base font-semibold sm:text-2xl"
+        style={{
+          color:
+            resultat === "gagne"
+              ? couleurTexte(etat, etat.monSymbole)
+              : resultat === "perdu"
+                ? couleurTexte(etat, autre(etat.monSymbole))
+                : resultat === "nul"
+                  ? "var(--vert-fonce)"
+                  : "var(--encre)",
+        }}
       >
         <Statut etat={etat} arbitreLent={arbitreLent} />
       </p>
@@ -304,6 +319,7 @@ export default function SalleEnLigne({ etatInitial }: { etatInitial: EtatPartie 
         estJouable={(index) => monTour && etat.plateau[index] === " "}
         surClic={cliquer}
         fantome={etat.monSymbole}
+        apparences={etat.apparences}
         ligne={etat.ligne}
         attenue={resultat === "nul"}
         fete={resultat === "gagne"}
@@ -326,6 +342,11 @@ export default function SalleEnLigne({ etatInitial }: { etatInitial: EtatPartie 
         )}
         {etat.statut === "TERMINEE" && (
           <>
+            {etat.piecesGagnees > 0 && (
+              <p className="pop flex items-center gap-1 text-sm font-semibold text-encre" data-gain={etat.piecesGagnees}>
+                +{etat.piecesGagnees} <IconePiece /> {etat.piecesGagnees > 1 ? "pièces" : "pièce"}
+              </p>
+            )}
             <FormulaireNouvellePartie />
             <Link
               href="/classement"

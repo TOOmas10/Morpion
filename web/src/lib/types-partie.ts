@@ -1,3 +1,6 @@
+import type { Apparence } from "@/lib/apparence";
+import type { Badge } from "@/lib/boutique";
+
 export type Symbole = "X" | "O";
 
 type StatutEnLigne = "ATTENTE" | "EN_COURS" | "TERMINEE" | "EXPIREE";
@@ -14,6 +17,9 @@ export type EtatPartie = {
   joueurX: string;
   joueurO: string | null;
   pointsGagnes: number;
+  piecesGagnees: number;
+  apparences: Record<Symbole, Apparence>;
+  badges: Record<Symbole, Badge | null>;
 };
 
 export type ResultatCoup =
