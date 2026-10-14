@@ -100,85 +100,81 @@ function FlechePage({
   );
 }
 
+type JoueurClasse = {
+  id: string;
+  name: string;
+  username: string | null;
+  displayUsername: string | null;
+  points: number;
+  badge: string | null;
+  rang: bigint;
+  position: bigint;
+  total: bigint;
+};
+
+// Un seul aller-retour avec la base : la page demandée (ramenée à la dernière si elle est trop loin),
+// avec le rang « sportif » de chacun (les ex æquo partagent le même rang) et le nombre total de joueurs.
+// L'id départage les égalités parfaites : l'ordre est stable d'une page à l'autre.
+function lirePage(page: number) {
+  return prisma.$queryRaw<JoueurClasse[]>`
+    WITH classe AS (
+      SELECT id, name, username, "displayUsername", points, badge,
+             RANK() OVER (ORDER BY points DESC) AS rang,
+             ROW_NUMBER() OVER (ORDER BY points DESC, "createdAt" ASC, id ASC) AS position,
+             COUNT(*) OVER () AS total
+      FROM "user"
+    )
+    SELECT * FROM classe
+    WHERE (position - 1) / ${PAR_PAGE}::int = LEAST(${page - 1}::int, (total - 1) / ${PAR_PAGE}::int)
+    ORDER BY position`;
+}
+
+function maPlace(moi: string) {
+  return prisma.$queryRaw<Pick<JoueurClasse, "rang" | "position">[]>`
+    SELECT rang, position FROM (
+      SELECT id,
+             RANK() OVER (ORDER BY points DESC) AS rang,
+             ROW_NUMBER() OVER (ORDER BY points DESC, "createdAt" ASC, id ASC) AS position
+      FROM "user"
+    ) AS classe
+    WHERE id = ${moi}`;
+}
+
 export default async function ClassementPage({
   searchParams,
 }: PageProps<"/classement">) {
-  const [session, total, parametres] = await Promise.all([
+  const { page: pageDemandee } = await searchParams;
+  const [session, joueurs] = await Promise.all([
     lireSession(),
-    prisma.user.count(),
-    searchParams,
+    lirePage(numeroDePage(pageDemandee)),
   ]);
   const moi = session?.user.id;
+  const total = joueurs.length ? Number(joueurs[0].total) : 0;
   const pages = Math.max(1, Math.ceil(total / PAR_PAGE));
-  const page = Math.min(numeroDePage(parametres.page), pages);
-  const saut = (page - 1) * PAR_PAGE;
+  const page = joueurs.length ? Math.floor((Number(joueurs[0].position) - 1) / PAR_PAGE) + 1 : 1;
 
-  const joueurs = await prisma.user.findMany({
-    // L'id départage les égalités parfaites : l'ordre est stable d'une page à l'autre.
-    orderBy: [{ points: "desc" }, { createdAt: "asc" }, { id: "asc" }],
-    skip: saut,
-    take: PAR_PAGE,
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      displayUsername: true,
-      points: true,
-      badge: true,
-    },
-  });
-
-  // Rang « sportif » : les ex æquo partagent le même rang, le suivant saute des places.
-  const devantLePremier = joueurs.length
-    ? await prisma.user.count({ where: { points: { gt: joueurs[0].points } } })
-    : 0;
-  const lignes: Ligne[] = [];
-  joueurs.forEach((joueur, index) => {
-    const precedente = lignes[index - 1];
-    const rang = !precedente
-      ? devantLePremier + 1
-      : precedente.points === joueur.points
-        ? precedente.rang
-        : saut + index + 1;
-    lignes.push({
-      id: joueur.id,
-      rang,
-      pseudo: pseudoDe(joueur),
-      points: joueur.points,
-      badge: badgeDe(joueur),
-    });
-  });
+  const lignes: Ligne[] = joueurs.map((joueur) => ({
+    id: joueur.id,
+    rang: Number(joueur.rang),
+    pseudo: pseudoDe(joueur),
+    points: joueur.points,
+    badge: badgeDe(joueur),
+  }));
 
   let maLigne: Ligne | null = null;
   let maPage: number | null = null;
   if (session && moi && !lignes.some((ligne) => ligne.id === moi)) {
-    const [devant, avantMoi] = await Promise.all([
-      prisma.user.count({ where: { points: { gt: session.user.points } } }),
-      prisma.user.count({
-        where: {
-          OR: [
-            { points: { gt: session.user.points } },
-            {
-              points: session.user.points,
-              createdAt: { lt: session.user.createdAt },
-            },
-            {
-              points: session.user.points,
-              createdAt: session.user.createdAt,
-              id: { lt: moi },
-            },
-          ],
-        },
-      }),
-    ]);
-    maLigne = {
-      id: moi,
-      rang: devant + 1,
-      pseudo: pseudoDe(session.user),
-      points: session.user.points,
-      badge: badgeDe(session.user),
-    };
-    maPage = Math.floor(avantMoi / PAR_PAGE) + 1;
+    const [place] = await maPlace(moi);
+    if (place) {
+      maLigne = {
+        id: moi,
+        rang: Number(place.rang),
+        pseudo: pseudoDe(session.user),
+        points: session.user.points,
+        badge: badgeDe(session.user),
+      };
+      maPage = Math.floor((Number(place.position) - 1) / PAR_PAGE) + 1;
+    }
   }
 
   return (
