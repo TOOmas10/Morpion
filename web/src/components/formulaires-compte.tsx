@@ -82,6 +82,21 @@ function ErreurServeur({ message }: { message: string | null }) {
   );
 }
 
+function CaseAfficher({ id, coche, surChange }: { id: string; coche: boolean; surChange: (v: boolean) => void }) {
+  return (
+    <label htmlFor={id} className="-mt-2 flex cursor-pointer items-center gap-2 self-start py-1 text-sm text-graphite">
+      <input
+        id={id}
+        type="checkbox"
+        checked={coche}
+        onChange={(evenement) => surChange(evenement.target.checked)}
+        className="size-4 cursor-pointer accent-rose-fonce"
+      />
+      Afficher le mot de passe
+    </label>
+  );
+}
+
 type ValeursInscription = {
   pseudo: string;
   motDePasse: string;
@@ -91,6 +106,7 @@ type ValeursInscription = {
 export function FormulaireInscription({ retour }: { retour: string }) {
   const router = useRouter();
   const [erreurServeur, setErreurServeur] = useState<string | null>(null);
+  const [visible, setVisible] = useState(false);
   const {
     register,
     handleSubmit,
@@ -135,7 +151,7 @@ export function FormulaireInscription({ retour }: { retour: string }) {
       <Champ id="motDePasse" libelle="Mot de passe" erreur={errors.motDePasse}>
         <Input
           id="motDePasse"
-          type="password"
+          type={visible ? "text" : "password"}
           autoComplete="new-password"
           aria-invalid={!!errors.motDePasse}
           aria-describedby={errors.motDePasse ? "motDePasse-erreur" : undefined}
@@ -150,7 +166,7 @@ export function FormulaireInscription({ retour }: { retour: string }) {
       <Champ id="confirmation" libelle="Confirme le mot de passe" erreur={errors.confirmation}>
         <Input
           id="confirmation"
-          type="password"
+          type={visible ? "text" : "password"}
           autoComplete="new-password"
           aria-invalid={!!errors.confirmation}
           aria-describedby={errors.confirmation ? "confirmation-erreur" : undefined}
@@ -162,6 +178,7 @@ export function FormulaireInscription({ retour }: { retour: string }) {
           })}
         />
       </Champ>
+      <CaseAfficher id="afficher-inscription" coche={visible} surChange={setVisible} />
       <p className="text-center text-sm text-graphite">
         Pas d&apos;email : note bien ton mot de passe, il ne pourra pas être récupéré.
       </p>
@@ -194,6 +211,7 @@ type ValeursConnexion = {
 export function FormulaireConnexion({ retour }: { retour: string }) {
   const router = useRouter();
   const [erreurServeur, setErreurServeur] = useState<string | null>(null);
+  const [visible, setVisible] = useState(false);
   const {
     register,
     handleSubmit,
@@ -235,7 +253,7 @@ export function FormulaireConnexion({ retour }: { retour: string }) {
       <Champ id="motDePasse" libelle="Mot de passe" erreur={errors.motDePasse}>
         <Input
           id="motDePasse"
-          type="password"
+          type={visible ? "text" : "password"}
           autoComplete="current-password"
           aria-invalid={!!errors.motDePasse}
           aria-describedby={errors.motDePasse ? "motDePasse-erreur" : undefined}
@@ -245,6 +263,7 @@ export function FormulaireConnexion({ retour }: { retour: string }) {
           })}
         />
       </Champ>
+      <CaseAfficher id="afficher-connexion" coche={visible} surChange={setVisible} />
       <ErreurServeur message={erreurServeur} />
       <div className="flex justify-center pt-2">
         <BoutonGomme

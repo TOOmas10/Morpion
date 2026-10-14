@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { Retour } from "@/components/choix";
 import Morpion from "@/components/morpion";
 import { NIVEAUX, type Niveau } from "@/lib/moteur";
-import { equipementConnecte } from "@/lib/session";
 import TransitionPage from "@/components/transition-page";
 
 const NOMS: Record<Niveau, string> = {
@@ -29,18 +28,12 @@ export default async function PartieIAPage({
 }: PageProps<"/jouer/ia/[niveau]">) {
   const { niveau } = await params;
   if (!NIVEAUX.includes(niveau as Niveau)) notFound();
-  const equipement = await equipementConnecte();
 
   return (
     <TransitionPage>
       <div className="flex flex-col items-center gap-6">
         <Retour href="/jouer/ia" />
-        <Morpion
-          mode="ia"
-          niveau={niveau as Niveau}
-          equipement={equipement}
-          connecte={equipement !== null}
-        />
+        <Morpion mode="ia" niveau={niveau as Niveau} />
       </div>
     </TransitionPage>
   );

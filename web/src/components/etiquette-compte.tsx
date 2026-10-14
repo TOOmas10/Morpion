@@ -1,11 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import BoutonDeconnexion from "@/components/bouton-deconnexion";
 import { IconeBadge, IconePiece } from "@/components/icones-boutique";
 import { badgeDe } from "@/lib/apparence";
-import { lireSession, pseudoDe } from "@/lib/session";
+import { authClient } from "@/lib/auth-client";
 
-export default async function EtiquetteCompte() {
-  const session = await lireSession();
+// Lue dans le navigateur (et rafraîchie après un gain ou un achat) : aucune page n'a besoin
+// d'interroger la base au rendu juste pour l'en-tête, elles peuvent donc être statiques.
+export default function EtiquetteCompte() {
+  const { data: session, isPending } = authClient.useSession();
+
+  if (isPending && !session) return <span aria-hidden />;
 
   if (!session) {
     return (
@@ -19,11 +25,12 @@ export default async function EtiquetteCompte() {
   }
 
   const { points, pieces } = session.user;
+  const pseudo = session.user.displayUsername ?? session.user.username ?? session.user.name;
   const badge = badgeDe(session.user);
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 text-xs sm:text-sm">
       <span className="font-semibold whitespace-nowrap text-encre" data-compte={session.user.username}>
-        {pseudoDe(session.user)}
+        {pseudo}
         {badge && <IconeBadge badge={badge} className="ml-1" />}
         <span className="font-normal text-graphite">
           {" "}

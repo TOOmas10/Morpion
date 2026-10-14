@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Choix, ChoixPostIt, Retour } from "@/components/choix";
 import { Croix, Rond } from "@/components/croquis";
+import PrechargerIA from "@/components/precharger-ia";
 import TransitionPage from "@/components/transition-page";
 
 export const metadata: Metadata = {
@@ -30,6 +31,7 @@ export default function JouerPage() {
             En ligne
           </ChoixPostIt>
         </Choix>
+        <PrechargerIA />
       </div>
     </TransitionPage>
   );

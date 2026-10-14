@@ -220,9 +220,11 @@ body {
   }
 }
 
+/* La feuille part d'une opacité partielle (pas de 0) : Chrome compte alors son contenu
+   dès le premier affichage pour le LCP, au lieu d'attendre la fin de l'animation. */
 @keyframes poser-feuille {
   from {
-    opacity: 0;
+    opacity: 0.35;
     translate: 0 28px;
     scale: 0.97;
   }

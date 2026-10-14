@@ -81,3 +81,13 @@ export async function equiper(
   await prisma.user.update({ where: { id: moi }, data: champEquipement(categorie, valeur) });
   return { ok: true, message: "Équipé !" };
 }
+
+export async function lirePossessions(): Promise<string[]> {
+  const session = await lireSession();
+  if (!session) return [];
+  const possessions = await prisma.possession.findMany({
+    where: { userId: session.user.id },
+    select: { article: true },
+  });
+  return possessions.map((p) => p.article);
+}

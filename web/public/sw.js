@@ -4,6 +4,7 @@ const CACHE_FICHIERS = `morpion-fichiers-${VERSION}`;
 
 const FICHIERS_A_RAFRAICHIR = [
   "/morpion.py",
+  "/moteur-worker.js",
   "/icon.svg",
   "/favicon.ico",
   "/apple-icon.png",

@@ -34,7 +34,7 @@ async function Contenu({ code, idUtilisateur }: { code: string; idUtilisateur: s
     return (
       <div className="flex flex-col items-center gap-4">
         <Retour href="/en-ligne" />
-        <SalleEnLigne etatInitial={etat} />
+        <SalleEnLigne key={etat.code} etatInitial={etat} />
       </div>
     );
   }

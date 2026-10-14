@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
+import IndiceLien from "@/components/indice-lien";
 import { cn } from "@/lib/utils";
 
 type Couleur = "jaune" | "rose" | "vert" | "bleu";
@@ -27,9 +28,10 @@ export function ChoixPostIt({ href, couleur, rotation = 0, children }: PropsChoi
       href={href}
       transitionTypes={["nav-avant"]}
       style={{ rotate: `${rotation}deg` } as CSSProperties}
-      className={cn(CLASSE_POSTIT, FONDS[couleur])}
+      className={cn(CLASSE_POSTIT, FONDS[couleur], "relative")}
     >
       {children}
+      <IndiceLien className="absolute bottom-2 left-1/2 -translate-x-1/2" />
     </Link>
   );
 }

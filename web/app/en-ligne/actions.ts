@@ -2,7 +2,7 @@
 
 import { randomInt } from "node:crypto";
 import { redirect } from "next/navigation";
-import { Prisma } from "@/generated/prisma/client";
+import { Prisma, type Partie } from "@/generated/prisma/client";
 import { arbitrer } from "@/lib/arbitre";
 import { CASES } from "@/lib/grille";
 import {
@@ -18,7 +18,7 @@ import {
 } from "@/lib/parties";
 import { prisma } from "@/lib/prisma";
 import { lireSession } from "@/lib/session";
-import type { ResultatCoup, ResultatRejoindre } from "@/lib/types-partie";
+import type { ResultatCoup, ResultatRejoindre, ResultatRevanche } from "@/lib/types-partie";
 
 async function idConnecte(retour: string): Promise<string> {
   const session = await lireSession();
@@ -182,4 +182,68 @@ export async function abandonner(saisie: string): Promise<ResultatCoup> {
   const etat = await etatPourUtilisateur(code, moi);
   if (!etat) return { ok: false, erreur: "Partie introuvable", etat: null };
   return { ok: true, etat };
+}
+
+async function lancerRevanche(partie: Partie, moi: string): Promise<string> {
+  const adversaireId = partie.joueurXId === moi ? partie.joueurOId : partie.joueurXId;
+  if (!adversaireId) throw new Error("Adversaire introuvable");
+  for (let essai = 0; essai < 3; essai++) {
+    const code = genererCode();
+    try {
+      const cree = await prisma.$transaction(async (tx) => {
+        await tx.partie.create({
+          data: {
+            code,
+            statut: "EN_COURS",
+            joueurXId: partie.joueurOId ?? adversaireId,
+            joueurOId: partie.joueurXId,
+          },
+        });
+        const { count } = await tx.partie.updateMany({
+          where: { id: partie.id, revancheCode: null },
+          data: { revancheCode: code },
+        });
+        if (count === 0) throw new Error("revanche-deja-lancee");
+        return code;
+      });
+      return cree;
+    } catch (erreur) {
+      if (erreur instanceof Error && erreur.message === "revanche-deja-lancee") {
+        const existante = await prisma.partie.findUnique({ where: { id: partie.id } });
+        if (existante?.revancheCode) return existante.revancheCode;
+        throw erreur;
+      }
+      const doublon =
+        erreur instanceof Prisma.PrismaClientKnownRequestError && erreur.code === "P2002";
+      if (!doublon) throw erreur;
+    }
+  }
+  throw new Error("Impossible de lancer la revanche");
+}
+
+export async function demanderRevanche(saisie: string): Promise<ResultatRevanche> {
+  const session = await lireSession();
+  if (!session) return { ok: false, erreur: "Connecte-toi" };
+  const moi = session.user.id;
+  const code = normaliserCode(String(saisie));
+
+  const partie = await prisma.partie.findUnique({ where: { code } });
+  if (!partie || !symboleDe(partie, moi)) return { ok: false, erreur: "Partie introuvable" };
+  if (partie.statut !== "TERMINEE") return { ok: false, erreur: "La partie n'est pas finie" };
+  if (partie.revancheCode) return { ok: true, code: partie.revancheCode, etat: null };
+
+  if (partie.revancheDemandeurId && partie.revancheDemandeurId !== moi) {
+    return { ok: true, code: await lancerRevanche(partie, moi), etat: null };
+  }
+
+  await prisma.partie.updateMany({
+    where: { id: partie.id, revancheDemandeurId: null },
+    data: { revancheDemandeurId: moi },
+  });
+  const apres = await prisma.partie.findUnique({ where: { id: partie.id } });
+  if (apres?.revancheCode) return { ok: true, code: apres.revancheCode, etat: null };
+  if (apres && apres.revancheDemandeurId !== moi) {
+    return { ok: true, code: await lancerRevanche(apres, moi), etat: null };
+  }
+  return { ok: true, code: null, etat: await etatPourUtilisateur(code, moi) };
 }

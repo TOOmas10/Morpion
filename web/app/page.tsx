@@ -1,5 +1,4 @@
 import { Choix, ChoixPostIt } from "@/components/choix";
-import PrechargerIA from "@/components/precharger-ia";
 import TransitionPage from "@/components/transition-page";
 
 export default function Home() {
@@ -20,7 +19,6 @@ export default function Home() {
             Crédits
           </ChoixPostIt>
         </Choix>
-        <PrechargerIA />
       </div>
     </TransitionPage>
   );

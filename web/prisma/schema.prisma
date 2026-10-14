@@ -91,19 +91,21 @@ enum StatutPartie {
 }
 
 model Partie {
-  id        String       @id @default(cuid())
-  code      String       @unique
-  statut    StatutPartie @default(ATTENTE)
-  plateau   String       @default("                                          ")
-  tour      String       @default("X")
-  gagnant   String?
-  finPar    String?
-  joueurXId String
-  joueurX   User         @relation("partiesX", fields: [joueurXId], references: [id], onDelete: Cascade)
-  joueurOId String?
-  joueurO   User?        @relation("partiesO", fields: [joueurOId], references: [id], onDelete: Cascade)
-  creeLe    DateTime     @default(now())
-  majLe     DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  code                String       @unique
+  statut              StatutPartie @default(ATTENTE)
+  plateau             String       @default("                                          ")
+  tour                String       @default("X")
+  gagnant             String?
+  finPar              String?
+  joueurXId           String
+  joueurX             User         @relation("partiesX", fields: [joueurXId], references: [id], onDelete: Cascade)
+  joueurOId           String?
+  joueurO             User?        @relation("partiesO", fields: [joueurOId], references: [id], onDelete: Cascade)
+  revancheDemandeurId String?
+  revancheCode        String?
+  creeLe              DateTime     @default(now())
+  majLe               DateTime     @updatedAt
 
   @@index([joueurXId])
   @@index([joueurOId])

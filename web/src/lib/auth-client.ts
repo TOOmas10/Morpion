@@ -8,3 +8,8 @@ import type { auth } from "@/lib/auth";
 export const authClient = createAuthClient({
   plugins: [usernameClient(), inferAdditionalFields<typeof auth>()],
 });
+
+// Relit la session (pseudo, points, pièces, équipement) après un gain ou un achat.
+export function rafraichirCompte() {
+  authClient.$store.notify("$sessionSignal");
+}

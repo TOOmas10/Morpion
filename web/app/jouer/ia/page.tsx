@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Choix, ChoixPostIt, Etoiles, Retour } from "@/components/choix";
+import PrechargerIA from "@/components/precharger-ia";
 import TransitionPage from "@/components/transition-page";
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function NiveauPage() {
             <span className="text-xs font-normal text-graphite">coriace</span>
           </ChoixPostIt>
         </Choix>
+        <PrechargerIA />
       </div>
     </TransitionPage>
   );

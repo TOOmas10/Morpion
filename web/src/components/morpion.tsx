@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { ReactNode, RefObject } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { commencerPartieLocale, terminerPartieLocale, type GainLocal } from "@app/jouer/actions";
@@ -10,17 +9,15 @@ import { IconePiece } from "./icones-boutique";
 import PlateauJeu from "./plateau";
 import { Symbole } from "./symbole";
 import { apparencesPartie, type Apparence, type Camp, type Equipement } from "@/lib/apparence";
+import { authClient, rafraichirCompte } from "@/lib/auth-client";
 import { COULEURS_CSS, PLAFOND_LOCAL_24H } from "@/lib/boutique";
 import { ALIGNEMENT, CASES } from "@/lib/grille";
 import {
   chargerMoteur,
   VIDE,
-  estPlein,
-  ligneGagnante,
-  coupIA,
-  quiGagne,
   HUMAIN,
   IA,
+  type Analyse,
   type Case,
   type Moteur,
   type Niveau,
@@ -65,12 +62,15 @@ const NOMS_NIVEAU: Record<Niveau, string> = {
 
 const PLATEAU_VIDE: Plateau = new Array<Case>(CASES).fill(VIDE);
 
-function resultat(moteur: Moteur, plateau: Plateau): Statut | null {
-  const gagnant = quiGagne(moteur, plateau);
-  if (gagnant === HUMAIN) return "gagne";
-  if (gagnant === IA) return "perdu";
-  if (estPlein(moteur, plateau)) return "nul";
+function finDe(analyse: Analyse): ResultatPartie | null {
+  if (analyse.gagnant === HUMAIN) return "gagne";
+  if (analyse.gagnant === IA) return "perdu";
+  if (analyse.plein) return "nul";
   return null;
+}
+
+function attendre(ms: number): Promise<void> {
+  return new Promise((resoudre) => setTimeout(resoudre, ms));
 }
 
 function NomJoueur({ joueur, apparence }: { joueur: Case; apparence: Apparence }) {
@@ -78,7 +78,7 @@ function NomJoueur({ joueur, apparence }: { joueur: Case; apparence: Apparence }
     <mark
       className="-rotate-1 rounded-sm px-1 text-encre box-decoration-clone"
       style={{
-        backgroundColor: `color-mix(in srgb, ${COULEURS_CSS[apparence.couleur].trait} 55%, transparent)`,
+        backgroundColor: `color-mix(in srgb, ${COULEURS_CSS[apparence.couleur].fond} 55%, transparent)`,
       }}
     >
       {joueur === HUMAIN ? "Joueur 1" : "Joueur 2"}
@@ -163,8 +163,6 @@ function Batons({ nombre }: { nombre: number }) {
 type PropsMorpion = {
   mode: Mode;
   niveau?: Niveau;
-  equipement?: Equipement | null;
-  connecte?: boolean;
 };
 
 function MessageGain({ gain, connecte }: { gain: GainLocal | null; connecte: boolean }) {
@@ -205,14 +203,16 @@ function demarrerManche(
     .catch(() => {});
 }
 
-export default function Morpion({
-  mode,
-  niveau = "difficile",
-  equipement = null,
-  connecte = false,
-}: PropsMorpion) {
-  const router = useRouter();
+export default function Morpion({ mode, niveau = "difficile" }: PropsMorpion) {
+  const { data: session } = authClient.useSession();
+  const connecte = session != null;
+  const { forme, couleur, trace, badge } = session?.user ?? {};
+  const equipement = useMemo<Equipement | null>(
+    () => (connecte ? { forme, couleur, trace, badge } : null),
+    [connecte, forme, couleur, trace, badge],
+  );
   const apparences = useMemo(() => apparencesPartie(equipement, null), [equipement]);
+  const occupeRef = useRef(false);
   const jetonRef = useRef<string | null>(null);
   const [gainLocal, setGainLocal] = useState<GainLocal | null>(null);
   const [plateau, setPlateau] = useState<Plateau>(PLATEAU_VIDE);
@@ -241,69 +241,45 @@ export default function Morpion({
   function enregistrerScore(fin: ResultatPartie) {
     setScore((s) => ({ ...s, [fin]: s[fin] + 1 }));
   }
-  function cliquer(index: number) {
+  function terminer(fin: ResultatPartie, analyse: Analyse) {
+    setStatut(fin);
+    setLigne(analyse.ligne);
+    enregistrerScore(fin);
+  }
+
+  async function cliquer(index: number) {
     const moteur = moteurRef.current;
-    if (!moteur || statut !== "tonTour" || plateau[index] !== VIDE) return;
-
-    if (mode === "duo") {
+    if (!moteur || occupeRef.current || statut !== "tonTour" || plateau[index] !== VIDE) return;
+    occupeRef.current = true;
+    try {
       const apres = [...plateau];
-      apres[index] = joueur;
+      apres[index] = mode === "duo" ? joueur : HUMAIN;
       setPlateau(apres);
-
-      const fin = resultat(moteur, apres);
+      const analyse = await moteur.analyser(apres);
+      const fin = finDe(analyse);
       if (fin) {
-        setStatut(fin);
-        if (fin === "gagne" || fin === "perdu") {
-          setLigne(ligneGagnante(moteur, apres));
-        }
-        if (fin === "gagne" || fin === "perdu" || fin === "nul") {
-          enregistrerScore(fin);
-        }
+        terminer(fin, analyse);
         return;
       }
-      setJoueur(joueur === HUMAIN ? IA : HUMAIN);
-      return;
-    }
-
-    const apresToi = [...plateau];
-    apresToi[index] = HUMAIN;
-    setPlateau(apresToi);
-
-    const finApresToi = resultat(moteur, apresToi);
-    if (finApresToi) {
-      setStatut(finApresToi);
-      if (finApresToi === "gagne" || finApresToi === "perdu") {
-        setLigne(ligneGagnante(moteur, apresToi));
+      if (mode === "duo") {
+        setJoueur(joueur === HUMAIN ? IA : HUMAIN);
+        return;
       }
-      if (
-        finApresToi === "gagne" ||
-        finApresToi === "perdu" ||
-        finApresToi === "nul"
-      ) {
-        enregistrerScore(finApresToi);
-      }
-      return;
-    }
-    setStatut("iaReflechit");
 
-    setTimeout(() => {
-      const coup = coupIA(moteur, apresToi, niveau);
-      const apresIA = [...apresToi];
+      setStatut("iaReflechit");
+      const [coup] = await Promise.all([moteur.coupIA(apres, niveau), attendre(450)]);
+      const apresIA = [...apres];
       apresIA[coup] = IA;
       setPlateau(apresIA);
-      const finApresIA = resultat(moteur, apresIA);
-      setStatut(finApresIA ? finApresIA : "tonTour");
-      if (finApresIA === "gagne" || finApresIA === "perdu") {
-        setLigne(ligneGagnante(moteur, apresIA));
-      }
-      if (
-        finApresIA === "gagne" ||
-        finApresIA === "perdu" ||
-        finApresIA === "nul"
-      ) {
-        enregistrerScore(finApresIA);
-      }
-    }, 450);
+      const analyseIA = await moteur.analyser(apresIA);
+      const finIA = finDe(analyseIA);
+      if (finIA) terminer(finIA, analyseIA);
+      else setStatut("tonTour");
+    } catch {
+      setStatut("erreur");
+    } finally {
+      occupeRef.current = false;
+    }
   }
 
   function rejouer() {
@@ -326,10 +302,10 @@ export default function Morpion({
       .then((resultatGain) => {
         if (!resultatGain) return;
         setGainLocal(resultatGain);
-        router.refresh();
+        rafraichirCompte();
       })
       .catch(() => {});
-  }, [partieTerminee, plateau, router]);
+  }, [partieTerminee, plateau]);
 
   return (
     <div className="relative flex w-full max-w-[400px] flex-col items-center gap-3">

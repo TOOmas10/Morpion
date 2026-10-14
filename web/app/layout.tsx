@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Playwrite_FR_Trad, Shantell_Sans } from "next/font/google";
+import { Shantell_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
 import Bureau from "@/components/bureau";
@@ -27,8 +28,14 @@ const shantell = Shantell_Sans({
   variable: "--font-hand",
 });
 
-const ecole = Playwrite_FR_Trad({
+// Playwrite FR Trad (licence OFL) hébergée ici en graisse 400 seule : 43 Ko au lieu de 70 Ko,
+// et préchargée, pour que les titres ne sautent pas quand la police arrive.
+const ecole = localFont({
+  src: "../src/fonts/playwrite-fr-trad-400.woff2",
+  weight: "400",
   variable: "--font-ecole",
+  display: "swap",
+  preload: true,
 });
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

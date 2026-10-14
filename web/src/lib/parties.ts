@@ -158,6 +158,13 @@ export async function etatPour(
     piecesGagnees,
     apparences: apparencesPartie(partie.joueurX, partie.joueurO),
     badges: { X: badgeDe(partie.joueurX), O: badgeDe(partie.joueurO) },
+    revanche:
+      partie.revancheDemandeurId === null
+        ? "aucune"
+        : partie.revancheDemandeurId === idDe(partie, monSymbole)
+          ? "moi"
+          : "adversaire",
+    codeRevanche: partie.revancheCode,
   };
 }
 

@@ -101,10 +101,27 @@ export function InvitationRejoindre({ code }: { code: string }) {
   );
 }
 
-export function FormulaireNouvellePartie() {
+function BoutonDiscret({ texte }: { texte: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="cursor-pointer py-1 text-sm text-graphite underline underline-offset-4 disabled:cursor-wait disabled:opacity-60"
+    >
+      {pending ? "Création…" : texte}
+    </button>
+  );
+}
+
+export function FormulaireNouvellePartie({ discret = false }: { discret?: boolean }) {
   return (
     <form action={creerPartie}>
-      <BoutonGommeFormulaire texte="Nouvelle partie" />
+      {discret ? (
+        <BoutonDiscret texte="Nouvelle partie" />
+      ) : (
+        <BoutonGommeFormulaire texte="Nouvelle partie" />
+      )}
     </form>
   );
 }

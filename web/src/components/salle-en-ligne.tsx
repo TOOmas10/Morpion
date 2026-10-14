@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { abandonner, jouerCoup } from "@app/en-ligne/actions";
+import { abandonner, demanderRevanche, jouerCoup } from "@app/en-ligne/actions";
+import BoutonGomme from "@/components/bouton-gomme";
 import { IconeBadge, IconePiece } from "@/components/icones-boutique";
 import { Symbole as DessinSymbole } from "@/components/symbole";
 import { FormulaireNouvellePartie } from "@/components/formulaires-partie";
 import PlateauJeu from "@/components/plateau";
+import { rafraichirCompte } from "@/lib/auth-client";
 import { COULEURS_CSS } from "@/lib/boutique";
 import { ALIGNEMENT } from "@/lib/grille";
 import type { EtatPartie, Symbole } from "@/lib/types-partie";
@@ -28,7 +30,7 @@ function Pseudo({
     <mark
       className="-rotate-1 rounded-sm px-1 text-encre box-decoration-clone"
       style={{
-        backgroundColor: `color-mix(in srgb, ${COULEURS_CSS[etat.apparences[symbole].couleur].trait} 55%, transparent)`,
+        backgroundColor: `color-mix(in srgb, ${COULEURS_CSS[etat.apparences[symbole].couleur].fond} 55%, transparent)`,
       }}
     >
       {children}
@@ -109,6 +111,61 @@ function Statut({ etat, arbitreLent }: { etat: EtatPartie; arbitreLent: boolean 
   return null;
 }
 
+const DUREE_ATTENTE_REVANCHE_MS = 3 * 60 * 1000;
+
+function ZoneRevanche({
+  etat,
+  enCours,
+  surClic,
+}: {
+  etat: EtatPartie;
+  enCours: boolean;
+  surClic: () => void;
+}) {
+  const lui = autre(etat.monSymbole);
+  const nom = nomDe(etat, lui);
+  if (etat.codeRevanche) {
+    // On revient sur une partie dont la revanche est déjà lancée (bouton Retour, vieux lien…).
+    return (
+      <Link
+        href={`/en-ligne/${etat.codeRevanche}`}
+        data-revanche="lancee"
+        className="py-1 text-sm font-semibold text-encre underline underline-offset-4"
+      >
+        Aller à la revanche →
+      </Link>
+    );
+  }
+  if (etat.revanche === "moi") {
+    return (
+      <p className="text-sm font-semibold text-graphite" data-revanche="moi">
+        Revanche proposée, en attente de {nom}
+        <span className="points-attente" aria-hidden>
+          <span>.</span>
+          <span>.</span>
+          <span>.</span>
+        </span>
+      </p>
+    );
+  }
+  if (etat.revanche === "adversaire") {
+    return (
+      <div className="flex flex-col items-center gap-1" data-revanche="adversaire">
+        <p className="pop text-sm font-semibold text-encre">
+          <Pseudo etat={etat} symbole={lui}>
+            {nom}
+          </Pseudo>{" "}
+          veut une revanche !
+        </p>
+        <BoutonGomme texte={enCours ? "Un instant…" : "Accepter"} onClick={surClic} disabled={enCours} autoFocus />
+      </div>
+    );
+  }
+  return (
+    <BoutonGomme texte={enCours ? "Un instant…" : "Revanche"} onClick={surClic} disabled={enCours} autoFocus />
+  );
+}
+
 export default function SalleEnLigne({ etatInitial }: { etatInitial: EtatPartie }) {
   const router = useRouter();
   const [etat, setEtat] = useState<EtatPartie>(etatInitial);
@@ -117,16 +174,27 @@ export default function SalleEnLigne({ etatInitial }: { etatInitial: EtatPartie 
   const [arbitreLent, setArbitreLent] = useState(false);
   const actionEnCours = useRef(false);
   const statutPrecedent = useRef(etatInitial.statut);
+  // On n'est emmené d'office dans la revanche que si on l'a demandée depuis cet écran :
+  // revenir sur une vieille partie (bouton Retour, vieux lien) ne doit jamais renvoyer ailleurs.
+  const jaiDemande = useRef(false);
+  const parti = useRef(false);
+
+  const [revancheEnCours, setRevancheEnCours] = useState(false);
 
   const actif = etat.statut === "ATTENTE" || etat.statut === "EN_COURS";
+  const attenteRevanche = etat.statut === "TERMINEE" && !etat.codeRevanche;
+  const sonder = actif || attenteRevanche;
+  const intervalle = actif ? 1000 : 2000;
 
   useEffect(() => {
-    if (!actif) return;
+    if (!sonder) return;
     let annule = false;
     let echecs = 0;
     let minuteur: ReturnType<typeof setTimeout>;
+    const debut = Date.now();
 
     async function interroger() {
+      if (!actif && Date.now() - debut > DUREE_ATTENTE_REVANCHE_MS) return;
       if (!document.hidden && !actionEnCours.current) {
         try {
           const reponse = await fetch(`/api/parties/${etat.code}`, {
@@ -136,7 +204,10 @@ export default function SalleEnLigne({ etatInitial }: { etatInitial: EtatPartie 
           const nouvelEtat = (await reponse.json()) as EtatPartie;
           echecs = 0;
           if (!annule && !actionEnCours.current) {
-            setEtat(nouvelEtat);
+            // Rien n'a bougé : on garde l'ancien objet, React ne redessine pas la grille.
+            setEtat((precedent) =>
+              JSON.stringify(precedent) === JSON.stringify(nouvelEtat) ? precedent : nouvelEtat,
+            );
             setHorsLigne(false);
           }
         } catch {
@@ -145,16 +216,51 @@ export default function SalleEnLigne({ etatInitial }: { etatInitial: EtatPartie 
         }
       }
       if (!annule) {
-        minuteur = setTimeout(interroger, Math.min(1000 * 2 ** echecs, 8000));
+        minuteur = setTimeout(interroger, Math.min(intervalle * 2 ** echecs, 8000));
       }
     }
 
-    minuteur = setTimeout(interroger, 1000);
+    minuteur = setTimeout(interroger, intervalle);
     return () => {
       annule = true;
       clearTimeout(minuteur);
     };
-  }, [actif, etat.code]);
+  }, [sonder, actif, intervalle, etat.code]);
+
+  const allerALaRevanche = useCallback(
+    (code: string) => {
+      if (parti.current) return;
+      parti.current = true;
+      router.push(`/en-ligne/${code}`);
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    if (!etat.codeRevanche) {
+      if (etat.revanche === "moi") jaiDemande.current = true;
+      return;
+    }
+    if (jaiDemande.current) allerALaRevanche(etat.codeRevanche);
+  }, [etat.revanche, etat.codeRevanche, allerALaRevanche]);
+
+  async function revanche() {
+    if (actionEnCours.current) return;
+    actionEnCours.current = true;
+    jaiDemande.current = true;
+    setRevancheEnCours(true);
+    try {
+      const resultat = await demanderRevanche(etat.code);
+      if (!resultat.ok) toast.error(resultat.erreur);
+      else if (resultat.code) allerALaRevanche(resultat.code);
+      else if (resultat.etat) setEtat(resultat.etat);
+    } catch {
+      toast.error("La revanche n'est pas partie, réessaie");
+    } finally {
+      actionEnCours.current = false;
+      setRevancheEnCours(false);
+    }
+  }
 
   useEffect(() => {
     const avant = statutPrecedent.current;
@@ -163,8 +269,8 @@ export default function SalleEnLigne({ etatInitial }: { etatInitial: EtatPartie 
       const adverse = etat.monSymbole === "X" ? etat.joueurO : etat.joueurX;
       toast.success(`${adverse} a rejoint la partie !`);
     }
-    if (avant !== "TERMINEE" && etat.statut === "TERMINEE") router.refresh();
-  }, [etat.statut, etat.monSymbole, etat.joueurO, etat.joueurX, router]);
+    if (avant !== "TERMINEE" && etat.statut === "TERMINEE") rafraichirCompte();
+  }, [etat.statut, etat.monSymbole, etat.joueurO, etat.joueurX]);
 
   async function cliquer(index: number) {
     if (
@@ -347,13 +453,16 @@ export default function SalleEnLigne({ etatInitial }: { etatInitial: EtatPartie 
                 +{etat.piecesGagnees} <IconePiece /> {etat.piecesGagnees > 1 ? "pièces" : "pièce"}
               </p>
             )}
-            <FormulaireNouvellePartie />
-            <Link
-              href="/classement"
-              className="inline-block py-1 text-graphite underline-offset-4 hover:underline"
-            >
-              Voir le classement
-            </Link>
+            <ZoneRevanche etat={etat} enCours={revancheEnCours} surClic={revanche} />
+            <div className="flex items-center gap-4">
+              <FormulaireNouvellePartie discret />
+              <Link
+                href="/classement"
+                className="inline-block py-1 text-sm text-graphite underline-offset-4 hover:underline"
+              >
+                Classement
+              </Link>
+            </div>
           </>
         )}
       </div>

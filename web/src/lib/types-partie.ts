@@ -20,6 +20,8 @@ export type EtatPartie = {
   piecesGagnees: number;
   apparences: Record<Symbole, Apparence>;
   badges: Record<Symbole, Badge | null>;
+  revanche: "aucune" | "moi" | "adversaire";
+  codeRevanche: string | null;
 };
 
 export type ResultatCoup =
@@ -27,3 +29,7 @@ export type ResultatCoup =
   | { ok: false; erreur: string; etat: EtatPartie | null };
 
 export type ResultatRejoindre = { erreur: string | null };
+
+export type ResultatRevanche =
+  | { ok: true; code: string | null; etat: EtatPartie | null }
+  | { ok: false; erreur: string };

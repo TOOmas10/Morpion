@@ -1,65 +1,93 @@
-import type { PyodideAPI, loadPyodide } from "pyodide";
+// Le moteur Python (Pyodide + morpion.py) vit dans un Web Worker (public/moteur-worker.js) :
+// le fil principal reste libre pour l'interface pendant le chargement et la réflexion de l'IA.
+const URL_WORKER = "/moteur-worker.js?v=1";
 
-declare global {
-  interface Window {
-    loadPyodide?: typeof loadPyodide;
-  }
-}
-
-const URL_PYODIDE = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/";
-
-type ModuleMorpion = {
-  coup_ia: (plateau: unknown, niveau: string) => number;
-  gagnant: (plateau: unknown) => string | undefined;
-  plein: (plateau: unknown) => boolean;
-  LIGNES_GAGNANTES: { toJs: () => unknown; destroy: () => void };
+export type Analyse = {
+  gagnant: Case | null;
+  plein: boolean;
+  ligne: number[] | null;
 };
 
 export type Moteur = {
-  pyodide: PyodideAPI;
-  morpion: ModuleMorpion;
+  analyser: (plateau: Plateau) => Promise<Analyse>;
+  coupIA: (plateau: Plateau, niveau: Niveau) => Promise<number>;
 };
 
-let chargement: Promise<Moteur> | null = null;
+type Reponse = { id: number; ok: true; resultat: unknown } | { id: number; ok: false; erreur: string };
 
-function chargerScript(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (window.loadPyodide) {
-      resolve();
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = URL_PYODIDE + "pyodide.js";
-    script.onload = () => {
-      resolve();
-    };
-    script.onerror = () => {
-      reject(new Error("Impossible de charger Pyodide"));
-    };
-    document.head.appendChild(script);
+type Attente = { resoudre: (valeur: unknown) => void; rejeter: (erreur: Error) => void };
+
+let worker: Worker | null = null;
+let chargement: Promise<Moteur> | null = null;
+let numero = 0;
+const attentes = new Map<number, Attente>();
+
+function abandonner(erreur: Error) {
+  worker?.terminate();
+  worker = null;
+  chargement = null;
+  for (const attente of attentes.values()) attente.rejeter(erreur);
+  attentes.clear();
+}
+
+function lancerWorker(): Worker {
+  if (worker) return worker;
+  const nouveau = new Worker(URL_WORKER);
+  nouveau.onmessage = (evenement: MessageEvent<Reponse>) => {
+    const reponse = evenement.data;
+    const attente = attentes.get(reponse.id);
+    if (!attente) return;
+    attentes.delete(reponse.id);
+    if (reponse.ok) attente.resoudre(reponse.resultat);
+    else attente.rejeter(new Error(reponse.erreur));
+  };
+  nouveau.onerror = () => abandonner(new Error("Le moteur Python s'est arrêté"));
+  worker = nouveau;
+  return nouveau;
+}
+
+function demander<T>(message: { type: string; plateau?: Plateau; niveau?: Niveau }): Promise<T> {
+  const cible = lancerWorker();
+  const id = ++numero;
+  return new Promise<T>((resoudre, rejeter) => {
+    attentes.set(id, { resoudre: resoudre as (valeur: unknown) => void, rejeter });
+    cible.postMessage({ id, ...message });
   });
 }
 
-async function charger(): Promise<Moteur> {
-  await chargerScript();
-  const lancer = window.loadPyodide;
-  if (!lancer) throw new Error("loadPyodide introuvable");
-  const pyodide = await lancer({ indexURL: URL_PYODIDE });
-  const reponse = await fetch("/morpion.py");
-  const code = await reponse.text();
-  pyodide.FS.writeFile("/home/pyodide/morpion.py", code);
-  const morpion = pyodide.pyimport("morpion") as ModuleMorpion;
-  return { pyodide, morpion };
-}
+const MOTEUR: Moteur = {
+  analyser: (plateau) => demander<Analyse>({ type: "analyser", plateau }),
+  coupIA: (plateau, niveau) => demander<number>({ type: "jouer", plateau, niveau }),
+};
 
 export function chargerMoteur(): Promise<Moteur> {
   if (!chargement) {
-    chargement = charger().catch((erreur) => {
-      chargement = null;
-      throw erreur;
-    });
+    chargement = demander<null>({ type: "pret" }).then(
+      () => MOTEUR,
+      (erreur: Error) => {
+        abandonner(erreur);
+        throw erreur;
+      },
+    );
   }
   return chargement;
+}
+
+type Reseau = { saveData?: boolean; effectiveType?: string };
+
+// Précharge le moteur quand le navigateur n'a rien d'autre à faire, sauf en mode économie de données.
+export function prechargerMoteur(): () => void {
+  const reseau = (navigator as Navigator & { connection?: Reseau }).connection;
+  if (reseau?.saveData || reseau?.effectiveType?.includes("2g")) return () => {};
+  const lancer = () => {
+    chargerMoteur().catch(() => {});
+  };
+  if ("requestIdleCallback" in window) {
+    const id = window.requestIdleCallback(lancer, { timeout: 3000 });
+    return () => window.cancelIdleCallback(id);
+  }
+  const id = setTimeout(lancer, 1000);
+  return () => clearTimeout(id);
 }
 
 export type Case = "X" | "O" | " ";
@@ -73,42 +101,3 @@ export const IA: Case = "O";
 export type Niveau = "facile" | "moyen" | "difficile";
 
 export const NIVEAUX: Niveau[] = ["facile", "moyen", "difficile"];
-
-export function coupIA(moteur: Moteur, plateau: Plateau, niveau: Niveau): number {
-  const liste = moteur.pyodide.toPy(plateau);
-  try {
-    return moteur.morpion.coup_ia(liste, niveau);
-  } finally {
-    liste.destroy();
-  }
-}
-
-export function quiGagne(moteur: Moteur, plateau: Plateau): string | undefined {
-  const liste = moteur.pyodide.toPy(plateau);
-  try {
-    return moteur.morpion.gagnant(liste);
-  } finally {
-    liste.destroy();
-  }
-}
-
-export function estPlein(moteur: Moteur, plateau: Plateau): boolean {
-  const liste = moteur.pyodide.toPy(plateau);
-  try {
-    return moteur.morpion.plein(liste);
-  } finally {
-    liste.destroy();
-  }
-}
-
-export function ligneGagnante(moteur: Moteur, plateau: Plateau): number[] | null {
-  const gagnant = quiGagne(moteur, plateau);
-  if (!gagnant) return null;
-  const proxy = moteur.morpion.LIGNES_GAGNANTES;
-  try {
-    const lignes = proxy.toJs() as number[][];
-    return lignes.find((ligne) => ligne.every((i) => plateau[i] === gagnant)) ?? null;
-  } finally {
-    proxy.destroy();
-  }
-}
