@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: "Classement",
 };
 
-const PAR_PAGE = 10;
+const PAR_PAGE = 5;
 
 type Ligne = {
   id: string;
@@ -90,14 +90,19 @@ function FlechePage({
       href={lienPage(page)}
       scroll={false}
       aria-label={libelle}
-      className={cn(classe, "transition hover:border-graphite/60 active:translate-y-0.5")}
+      className={cn(
+        classe,
+        "transition hover:border-graphite/60 active:translate-y-0.5",
+      )}
     >
       {children}
     </Link>
   );
 }
 
-export default async function ClassementPage({ searchParams }: PageProps<"/classement">) {
+export default async function ClassementPage({
+  searchParams,
+}: PageProps<"/classement">) {
   const [session, total, parametres] = await Promise.all([
     lireSession(),
     prisma.user.count(),
@@ -153,8 +158,15 @@ export default async function ClassementPage({ searchParams }: PageProps<"/class
         where: {
           OR: [
             { points: { gt: session.user.points } },
-            { points: session.user.points, createdAt: { lt: session.user.createdAt } },
-            { points: session.user.points, createdAt: session.user.createdAt, id: { lt: moi } },
+            {
+              points: session.user.points,
+              createdAt: { lt: session.user.createdAt },
+            },
+            {
+              points: session.user.points,
+              createdAt: session.user.createdAt,
+              id: { lt: moi },
+            },
           ],
         },
       }),
@@ -178,7 +190,9 @@ export default async function ClassementPage({ searchParams }: PageProps<"/class
           En ligne : victoire 3 pts · nul 1 pt · défaite 0
         </p>
         {lignes.length === 0 ? (
-          <p className="text-graphite">Personne n&apos;a encore joué en ligne.</p>
+          <p className="text-graphite">
+            Personne n&apos;a encore joué en ligne.
+          </p>
         ) : (
           <ol key={page} className="flex w-full max-w-xs flex-col text-lg">
             {lignes.map((ligne, index) => (
@@ -200,15 +214,29 @@ export default async function ClassementPage({ searchParams }: PageProps<"/class
           </ol>
         )}
         {pages > 1 && (
-          <nav className="flex flex-col items-center gap-2" aria-label="Pages du classement">
+          <nav
+            className="flex flex-col items-center gap-2"
+            aria-label="Pages du classement"
+          >
             <div className="flex items-center gap-4">
-              <FlechePage page={page - 1} actif={page > 1} libelle="Page précédente">
+              <FlechePage
+                page={page - 1}
+                actif={page > 1}
+                libelle="Page précédente"
+              >
                 ‹
               </FlechePage>
-              <span className="min-w-14 text-center text-graphite" data-page={page}>
+              <span
+                className="min-w-14 text-center text-graphite"
+                data-page={page}
+              >
                 {page} / {pages}
               </span>
-              <FlechePage page={page + 1} actif={page < pages} libelle="Page suivante">
+              <FlechePage
+                page={page + 1}
+                actif={page < pages}
+                libelle="Page suivante"
+              >
                 ›
               </FlechePage>
             </div>
