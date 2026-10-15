@@ -4,7 +4,9 @@ import Morpion from "@/components/morpion";
 import TransitionPage from "@/components/transition-page";
 
 export const metadata: Metadata = {
-  title: "Duo",
+  title: "À deux sur le même écran",
+  description: "Joue au morpion 7×6 à deux sur le même téléphone ou ordinateur : le premier qui aligne 4 symboles gagne.",
+  alternates: { canonical: "/jouer/duo" },
 };
 
 export default function PartieDuoPage() {

@@ -1,0 +1,17 @@
+# Dependabot propose chaque semaine les mises à jour des dépendances du site (dossier web),
+# et tout de suite celles qui corrigent une faille de sécurité.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 5
+    groups:
+      # Les petites mises à jour (correctifs et nouveautés compatibles) arrivent ensemble, en une seule demande.
+      mises-a-jour-mineures:
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "Dépendances"

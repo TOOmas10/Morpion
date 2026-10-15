@@ -1,5 +1,6 @@
 import "server-only";
 import { randomInt } from "node:crypto";
+import { cache } from "react";
 import type { Partie, Prisma } from "@/generated/prisma/client";
 import { apparencesPartie, badgeDe } from "@/lib/apparence";
 import { arbitrer } from "@/lib/arbitre";
@@ -33,6 +34,21 @@ export function codeValide(code: string): boolean {
 export function limiteAttente(): Date {
   return new Date(Date.now() - DUREE_ATTENTE_MS);
 }
+
+// Lecture légère d'une invitation (sans effet de bord), pour l'aperçu des liens partagés
+// et l'accueil des visiteurs pas encore connectés. Mise en cache le temps d'une requête.
+export const lireInvitation = cache(async (code: string) => {
+  const partie = await prisma.partie.findUnique({
+    where: { code },
+    select: {
+      statut: true,
+      creeLe: true,
+      joueurX: { select: { name: true, username: true, displayUsername: true, badge: true } },
+    },
+  });
+  if (!partie || partie.statut !== "ATTENTE" || partie.creeLe <= limiteAttente()) return null;
+  return { hote: pseudoDe(partie.joueurX), badge: badgeDe(partie.joueurX) };
+});
 
 export function symboleDe(partie: Partie, idUtilisateur: string): Symbole | null {
   if (partie.joueurXId === idUtilisateur) return "X";

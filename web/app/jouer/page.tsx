@@ -6,6 +6,8 @@ import TransitionPage from "@/components/transition-page";
 
 export const metadata: Metadata = {
   title: "Jouer",
+  description: "Choisis ton mode de jeu : contre l'IA, à deux sur le même écran ou en ligne avec un ami.",
+  alternates: { canonical: "/jouer" },
 };
 
 export default function JouerPage() {
@@ -13,7 +15,7 @@ export default function JouerPage() {
     <TransitionPage>
       <div className="flex flex-col items-center gap-6">
         <Retour href="/" />
-        <p className="font-ecole text-2xl text-encre">Choisis ton mode</p>
+        <h2 className="font-ecole text-2xl text-encre">Choisis ton mode</h2>
         <Choix>
           <ChoixPostIt href="/jouer/ia" couleur="bleu" rotation={-2}>
             <Rond className="size-8 text-bleu-fonce" />

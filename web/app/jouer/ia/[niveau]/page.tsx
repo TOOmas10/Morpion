@@ -20,7 +20,13 @@ export async function generateMetadata({
 }: PageProps<"/jouer/ia/[niveau]">): Promise<Metadata> {
   const { niveau } = await params;
   const estConnu = NIVEAUX.includes(niveau as Niveau);
-  return { title: estConnu ? NOMS[niveau as Niveau] : "Niveau" };
+  if (!estConnu) return { title: "Niveau" };
+  const nom = NOMS[niveau as Niveau].toLowerCase();
+  return {
+    title: `IA niveau ${nom}`,
+    description: `Partie de morpion 7×6 contre l'IA, niveau ${nom}. Aligne 4 symboles avant elle !`,
+    alternates: { canonical: `/jouer/ia/${niveau}` },
+  };
 }
 
 export default async function PartieIAPage({

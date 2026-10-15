@@ -23,6 +23,8 @@ model User {
   couleur         String?
   trace           String?
   badge           String?
+  // Dernière connexion ou visite : sert à effacer les comptes inactifs depuis 3 ans (RGPD).
+  vuLe            DateTime       @default(now())
   sessions        Session[]
   accounts        Account[]
   partiesX        Partie[]       @relation("partiesX")
@@ -135,4 +137,15 @@ model PartieLocale {
 
   @@index([userId, creeLe])
   @@map("partie_locale")
+}
+
+// Compteurs anti-abus de Better Auth (tentatives de connexion, d'inscription…), partagés
+// par tous les serveurs Vercel au lieu d'être gardés dans la mémoire de chacun.
+model RateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@map("rateLimit")
 }

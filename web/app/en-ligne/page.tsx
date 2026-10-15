@@ -10,6 +10,7 @@ import TransitionPage from "@/components/transition-page";
 
 export const metadata: Metadata = {
   title: "En ligne",
+  robots: { index: false },
 };
 
 export default async function EnLignePage() {
@@ -36,7 +37,7 @@ export default async function EnLignePage() {
     <TransitionPage>
       <div className="flex flex-col items-center gap-6">
         <Retour href="/jouer" />
-        <p className="font-ecole text-2xl text-encre">Jouer en ligne</p>
+        <h2 className="font-ecole text-2xl text-encre">Jouer en ligne</h2>
         <Choix>
           <FormulaireCreer />
           <FormulaireRejoindre />

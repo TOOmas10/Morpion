@@ -1,12 +1,18 @@
+import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";
 
-const PYODIDE = "https://cdn.jsdelivr.net";
 const production = process.env.NODE_ENV === "production";
+
+// Pyodide est servi par le site lui-même (public/pyodide/<version>/, voir scripts/copier-pyodide.mjs) :
+// aucun domaine extérieur n'est autorisé dans la politique de contenu.
+const versionPyodide: string = JSON.parse(
+  readFileSync("node_modules/pyodide/package.json", "utf8"),
+).version;
 
 const politiqueContenu = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' ${PYODIDE}`,
-  `connect-src 'self' ${PYODIDE}`,
+  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
+  "connect-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
@@ -22,6 +28,7 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   poweredByHeader: false,
   serverExternalPackages: ["pyodide"],
+  env: { VERSION_PYODIDE: versionPyodide },
   async headers() {
     return [
       {
@@ -45,6 +52,11 @@ const nextConfig: NextConfig = {
               ]
             : []),
         ],
+      },
+      {
+        // Le dossier porte le numéro de version : son contenu ne change jamais.
+        source: "/pyodide/:chemin*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
       {
         source: "/sw.js",

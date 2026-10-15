@@ -4,7 +4,9 @@ import PrechargerIA from "@/components/precharger-ia";
 import TransitionPage from "@/components/transition-page";
 
 export const metadata: Metadata = {
-  title: "Niveau",
+  title: "Jouer contre l'IA",
+  description: "Affronte une IA écrite en Python : niveau facile, moyen ou difficile. Aligne 4 symboles avant elle !",
+  alternates: { canonical: "/jouer/ia" },
 };
 
 export default function NiveauPage() {
@@ -12,7 +14,7 @@ export default function NiveauPage() {
     <TransitionPage>
       <div className="flex flex-col items-center gap-6">
         <Retour href="/jouer" />
-        <p className="font-ecole text-2xl text-encre">Choisis le niveau</p>
+        <h2 className="font-ecole text-2xl text-encre">Choisis le niveau</h2>
         <Choix>
           <ChoixPostIt href="/jouer/ia/facile" couleur="vert" rotation={-2}>
             <Etoiles n={1} />

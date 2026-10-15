@@ -9,9 +9,14 @@ import { lireSession, pseudoDe } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import TransitionPage from "@/components/transition-page";
 
-export const metadata: Metadata = {
-  title: "Classement",
-};
+export async function generateMetadata({ searchParams }: PageProps<"/classement">): Promise<Metadata> {
+  const page = numeroDePage((await searchParams).page);
+  return {
+    title: page > 1 ? `Classement, page ${page}` : "Classement",
+    description: "Le tableau d'honneur des joueurs en ligne du Morpion 7×6 : victoire 3 points, nul 1 point.",
+    alternates: { canonical: page > 1 ? `/classement?page=${page}` : "/classement" },
+  };
+}
 
 const PAR_PAGE = 5;
 
@@ -181,7 +186,7 @@ export default async function ClassementPage({
     <TransitionPage>
       <div className="flex flex-col items-center gap-4">
         <Retour href="/" />
-        <p className="font-ecole text-2xl text-encre">Tableau d&apos;honneur</p>
+        <h2 className="font-ecole text-2xl text-encre">Tableau d&apos;honneur</h2>
         <p className="text-sm text-graphite">
           En ligne : victoire 3 pts · nul 1 pt · défaite 0
         </p>

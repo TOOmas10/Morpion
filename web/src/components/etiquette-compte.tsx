@@ -30,8 +30,14 @@ export default function EtiquetteCompte() {
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 text-xs sm:text-sm">
       <span className="font-semibold whitespace-nowrap text-encre" data-compte={session.user.username}>
-        {pseudo}
-        {badge && <IconeBadge badge={badge} className="ml-1" />}
+        <Link
+          href="/compte"
+          aria-label={`${pseudo}, ouvrir mon compte`}
+          className="py-1 underline-offset-4 hover:underline"
+        >
+          {pseudo}
+          {badge && <IconeBadge badge={badge} className="ml-1" />}
+        </Link>
         <span className="font-normal text-graphite">
           {" "}
           ·{" "}

@@ -5,14 +5,15 @@ import Vitrine from "@/components/vitrine";
 
 export const metadata: Metadata = {
   title: "Ma collection",
+  robots: { index: false },
 };
 
 export default function CollectionPage() {
   return (
     <TransitionPage>
-      <div className="flex flex-col items-center gap-5">
+      <div className="flex flex-col items-center gap-4">
         <Retour href="/boutique" />
-        <p className="font-ecole text-2xl text-encre">Ma collection</p>
+        <h2 className="font-ecole text-2xl text-encre">Ma collection</h2>
         <Vitrine mode="collection" />
       </div>
     </TransitionPage>

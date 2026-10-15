@@ -8,6 +8,7 @@ import TransitionPage from "@/components/transition-page";
 
 export const metadata: Metadata = {
   title: "Inscription",
+  robots: { index: false },
 };
 
 export default async function InscriptionPage({
@@ -20,7 +21,7 @@ export default async function InscriptionPage({
     <TransitionPage>
       <div className="flex flex-col items-center gap-6">
         <Retour href="/" />
-        <p className="font-ecole text-2xl text-encre">Inscription</p>
+        <h2 className="font-ecole text-2xl text-encre">Inscription</h2>
         <FormulaireInscription retour={retour} />
       </div>
     </TransitionPage>

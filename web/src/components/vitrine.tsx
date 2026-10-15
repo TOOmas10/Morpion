@@ -277,7 +277,7 @@ export default function Vitrine({ mode }: { mode: Mode }) {
         ))}
       </nav>
 
-      <div role="tablist" aria-label="Catégories" className="flex flex-wrap justify-center gap-1.5">
+      <div role="tablist" aria-label="Catégories" className="flex flex-wrap justify-center gap-1 min-[380px]:gap-1.5">
         {CATEGORIES.map(({ id, titre }) => (
           <button
             key={id}
@@ -288,7 +288,7 @@ export default function Vitrine({ mode }: { mode: Mode }) {
             aria-controls="articles"
             onClick={() => choisirCategorie(id)}
             className={cn(
-              "min-h-8 cursor-pointer rounded-full border px-2.5 text-xs font-semibold transition min-[400px]:px-3 min-[400px]:text-sm",
+              "min-h-8 cursor-pointer rounded-full border px-2 text-xs font-semibold transition min-[380px]:px-2.5 min-[400px]:px-3 min-[400px]:text-sm",
               categorie === id
                 ? "border-encre bg-encre text-white"
                 : "border-graphite/30 bg-white/70 text-graphite hover:border-graphite/60",

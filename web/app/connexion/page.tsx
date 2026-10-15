@@ -8,6 +8,7 @@ import TransitionPage from "@/components/transition-page";
 
 export const metadata: Metadata = {
   title: "Connexion",
+  robots: { index: false },
 };
 
 export default async function ConnexionPage({
@@ -20,7 +21,7 @@ export default async function ConnexionPage({
     <TransitionPage>
       <div className="flex flex-col items-center gap-6">
         <Retour href="/" />
-        <p className="font-ecole text-2xl text-encre">Connexion</p>
+        <h2 className="font-ecole text-2xl text-encre">Connexion</h2>
         <FormulaireConnexion retour={retour} />
       </div>
     </TransitionPage>

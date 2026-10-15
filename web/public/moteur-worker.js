@@ -1,10 +1,13 @@
-// Moteur du Morpion : Pyodide et morpion.py tournent ici, dans un Web Worker,
-// pour que le chargement de Python et la réflexion de l'IA ne figent jamais l'écran.
-const URL_PYODIDE = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/";
-
-importScripts(URL_PYODIDE + "pyodide.js");
+// Moteur du Morpion : Pyodide et morpion.py tournent ici, dans un Web Worker « module »
+// (le seul type de worker accepté par Pyodide 314), pour que le chargement de Python
+// et la réflexion de l'IA ne figent jamais l'écran.
+// Pyodide est servi par le site lui-même ; sa version arrive dans l'adresse du worker (?pyodide=…).
+const version = new URL(self.location.href).searchParams.get("pyodide") ?? "";
+if (!/^[0-9][0-9.a-z]*$/.test(version)) throw new Error("Version de Pyodide invalide");
+const URL_PYODIDE = new URL(`/pyodide/${version}/`, self.location.origin).href;
 
 const pret = (async () => {
+  const { loadPyodide } = await import(URL_PYODIDE + "pyodide.mjs");
   const pyodide = await loadPyodide({ indexURL: URL_PYODIDE });
   const reponse = await fetch("/morpion.py");
   if (!reponse.ok) throw new Error("morpion.py introuvable");

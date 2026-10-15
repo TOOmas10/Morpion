@@ -7,7 +7,7 @@ import { useForm, type FieldError } from "react-hook-form";
 import BoutonGomme from "@/components/bouton-gomme";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
-import { emailTechnique, MOTIF_PSEUDO } from "@/lib/pseudo";
+import { emailTechnique, MOTIF_PSEUDO, pseudoAutorise } from "@/lib/pseudo";
 
 const MESSAGES_ERREUR: Record<string, string> = {
   USER_ALREADY_EXISTS: "Ce pseudo est déjà pris",
@@ -19,6 +19,7 @@ const MESSAGES_ERREUR: Record<string, string> = {
   INVALID_USERNAME_OR_PASSWORD: "Pseudo ou mot de passe incorrect",
   PASSWORD_TOO_SHORT: "Mot de passe trop court (8 caractères minimum)",
   PASSWORD_TOO_LONG: "Mot de passe trop long",
+  PSEUDO_INTERDIT: "Ce pseudo n'est pas autorisé, choisis-en un autre",
 };
 
 function traduire(erreur: { code?: string; status: number }): string {
@@ -39,6 +40,8 @@ const REGLES_PSEUDO = {
   minLength: { value: 3, message: "3 caractères minimum" },
   maxLength: { value: 20, message: "20 caractères maximum" },
   pattern: { value: MOTIF_PSEUDO, message: "Lettres, chiffres et _ seulement" },
+  validate: (pseudo: string) =>
+    pseudoAutorise(pseudo) || "Ce pseudo n'est pas autorisé, choisis-en un autre",
 };
 
 function Champ({
@@ -190,6 +193,17 @@ export function FormulaireInscription({ retour }: { retour: string }) {
           disabled={isSubmitting}
         />
       </div>
+      <p className="-mt-2 text-center text-xs text-graphite">
+        En t&apos;inscrivant, tu acceptes les{" "}
+        <Link href="/conditions" className="py-1 underline underline-offset-4">
+          conditions d&apos;utilisation
+        </Link>{" "}
+        et la{" "}
+        <Link href="/confidentialite" className="py-1 underline underline-offset-4">
+          politique de confidentialité
+        </Link>
+        .
+      </p>
       <p className="text-center text-graphite">
         Déjà un compte ?{" "}
         <Link

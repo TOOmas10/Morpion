@@ -1,6 +1,6 @@
 // Le moteur Python (Pyodide + morpion.py) vit dans un Web Worker (public/moteur-worker.js) :
 // le fil principal reste libre pour l'interface pendant le chargement et la réflexion de l'IA.
-const URL_WORKER = "/moteur-worker.js?v=1";
+const URL_WORKER = `/moteur-worker.js?v=3&pyodide=${process.env.VERSION_PYODIDE}`;
 
 export type Analyse = {
   gagnant: Case | null;
@@ -32,7 +32,7 @@ function abandonner(erreur: Error) {
 
 function lancerWorker(): Worker {
   if (worker) return worker;
-  const nouveau = new Worker(URL_WORKER);
+  const nouveau = new Worker(URL_WORKER, { type: "module" });
   nouveau.onmessage = (evenement: MessageEvent<Reponse>) => {
     const reponse = evenement.data;
     const attente = attentes.get(reponse.id);

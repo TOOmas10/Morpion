@@ -1,4 +1,5 @@
-const VERSION = "v1";
+// v2 : Pyodide est servi par le site (les anciennes copies venues de jsDelivr sont effacées).
+const VERSION = "v2";
 const CACHE_PAGES = `morpion-pages-${VERSION}`;
 const CACHE_FICHIERS = `morpion-fichiers-${VERSION}`;
 
@@ -48,9 +49,12 @@ self.addEventListener("fetch", (evenement) => {
 });
 
 function estImmuable(url) {
-  if (url.origin === "https://cdn.jsdelivr.net") return url.pathname.startsWith("/pyodide/");
   if (url.origin !== self.location.origin) return false;
-  return url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icones/");
+  return (
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname.startsWith("/icones/") ||
+    url.pathname.startsWith("/pyodide/")
+  );
 }
 
 async function cacheDabord(requete) {
