@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { IconeBadge, IconePiece } from "@/components/icones-boutique";
 import { Input } from "@/components/ui/input";
@@ -31,11 +31,13 @@ export default function EspaceCompte() {
   const [motDePasse, setMotDePasse] = useState("");
   const [visible, setVisible] = useState(false);
   const [enCours, setEnCours] = useState<"appareils" | "suppression" | null>(null);
+  // Après une suppression, la session disparaît : on va à l'accueil, pas à la page de connexion.
+  const supprime = useRef(false);
   const moi = session?.user.id;
   const sessionActuelle = session?.session.id;
 
   useEffect(() => {
-    if (!isPending && !session) router.replace("/connexion?retour=/compte");
+    if (!isPending && !session && !supprime.current) router.replace("/connexion?retour=/compte");
   }, [isPending, session, router]);
 
   useEffect(() => {
@@ -78,14 +80,16 @@ export default function EspaceCompte() {
     evenement.preventDefault();
     if (!motDePasse) return;
     setEnCours("suppression");
+    supprime.current = true;
     const { error } = await authClient.deleteUser({ password: motDePasse });
     if (error) {
+      supprime.current = false;
       setEnCours(null);
       toast.error(error.status === 429 ? "Trop d'essais : réessaie dans quelques minutes" : "Mot de passe incorrect");
       return;
     }
     toast.success("Ton compte et toutes tes données ont été supprimés");
-    router.push("/");
+    router.replace("/");
     router.refresh();
   }
 
